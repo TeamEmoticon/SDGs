@@ -58,35 +58,22 @@ test("AI_SUMMARY 입력은 summarize를 최대 1회 호출한다", async () => {
   assert.equal(result.execution?.aiStatus, "used");
 });
 
-test("GROUNDED_FACT_CHECK 입력은 factCheck를 최대 1회 호출한다", async () => {
+test("공개 주장도 AI_SUMMARY로만 처리하고 factCheck는 호출하지 않는다", async () => {
   const provider = new FakeProvider();
   const result = await successResult(req("다음 달부터 만 65세 이상 모든 국민에게 정부가 매달 30만 원을 지급합니다."), provider);
-  assert.equal(provider.factCheckCalls, 1);
-  assert.equal(provider.summarizeCalls, 0);
-  assert.equal(result.execution?.plannedMode, "GROUNDED_FACT_CHECK");
+  assert.equal(provider.factCheckCalls, 0);
+  assert.equal(provider.summarizeCalls, 1);
+  assert.equal(result.execution?.plannedMode, "AI_SUMMARY");
 });
 
-test("사실 판정은 사기 위험 점수와 분리한다", async () => {
-  const provider = new FakeProvider({
-    kind: "used",
-    analysis: {
-      ...usedAnalysis(["IANA", "example.com"]),
-      factCheck: {
-        claimQuote: "IANA가 example.com을 문서 예시용 도메인으로 관리한다",
-        verdict: "supported",
-        explanation: "공개 안내 자료와 일치합니다.",
-        evidenceStrength: "linked",
-      },
-    },
-  });
-  const result = await successResult(
-    req("정부는 IANA가 example.com을 문서 예시용 도메인으로 관리하도록 정책을 시행한다고 발표했습니다."),
-    provider,
-  );
-  assert.equal(result.execution?.plannedMode, "GROUNDED_FACT_CHECK");
-  assert.equal(result.riskScore, 0);
-  assert.equal(result.riskLevel, "safe");
-  assert.equal(result.ai.factCheck?.verdict, "supported");
+test("의심 링크만 입력하면 provider를 호출하지 않고 도메인 신호만 반환한다", async () => {
+  const provider = new FakeProvider();
+  const result = await successResult({ type: "url", content: "https://bit.ly/secure-check" }, provider);
+  assert.equal(provider.summarizeCalls, 0);
+  assert.equal(provider.factCheckCalls, 0);
+  assert.equal(result.execution?.plannedMode, "RULE_ONLY");
+  assert.equal(result.ai.used, false);
+  assert.ok(result.signals.length > 0);
 });
 
 test("키(provider)가 없으면 not_configured로 규칙 폴백한다", async () => {

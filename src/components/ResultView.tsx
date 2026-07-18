@@ -4,7 +4,15 @@ import { useState } from "react";
 import type { AnalysisResult, SensitiveKind } from "@/lib/types";
 import AnalysisEvidenceView from "@/components/AnalysisEvidenceView";
 import ResultSpeechButton from "@/components/ResultSpeechButton";
-import { LEVEL_STORY, RISK_UI, SENSITIVE_LABEL } from "@/lib/ui-config";
+import {
+  getAfterActionGuide,
+  getImmediateActions,
+  LEVEL_STORY,
+  MESSAGE_TYPE_LABEL,
+  REQUESTED_ACTION_LABEL,
+  RISK_UI,
+  SENSITIVE_LABEL,
+} from "@/lib/ui-config";
 
 interface Props {
   result: AnalysisResult;
@@ -13,7 +21,7 @@ interface Props {
 
 // 낮은 등급에도 항상 표시하는 안내(안전을 보장하지 않는다).
 const SAFETY_DISCLAIMER =
-  "이 결과가 글의 안전을 보장하지는 않습니다. 금전이나 개인정보를 요구하면 공식 기관에 다시 확인하세요.";
+  "이 결과만으로 안전 여부를 완전히 보장할 수 없습니다. 돈이나 개인정보를 요구받았다면 공식 경로로 다시 확인하세요.";
 
 export default function ResultView({ result, onReset }: Props) {
   const ui = RISK_UI[result.riskLevel];
@@ -22,13 +30,18 @@ export default function ResultView({ result, onReset }: Props) {
   const sensitiveKinds = (Object.keys(result.mask.counts) as SensitiveKind[]).filter(
     (kind) => result.mask.counts[kind] > 0,
   );
+  const requestedActionLabels = (result.ai.requestedActions ?? [])
+    .filter((action) => action !== "none")
+    .map((action) => REQUESTED_ACTION_LABEL[action]);
+  const immediateActions = getImmediateActions(result.ai.messageType, result.riskLevel);
+  const afterActionGuide = getAfterActionGuide(result.ai.messageType, result.riskLevel);
 
   return (
     <div className="animate-fade mx-auto max-w-2xl">
       <section className={`risk-panel ${ui.tone} overflow-hidden rounded-2xl p-5 sm:p-7`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <span className={`risk-badge rounded-full px-3 py-1 text-sm ${ui.tone}`}>
-            확인 완료 · {result.inputType === "url" ? "인터넷 주소" : "문자·글"}
+            확인 완료 · {result.inputType === "url" ? "의심 링크" : "문자·메신저"}
           </span>
           <span className="support-copy">
             {new Date(result.createdAt).toLocaleString("ko-KR", {
@@ -69,40 +82,55 @@ export default function ResultView({ result, onReset }: Props) {
         </div>
       </section>
 
-      <div className="mt-5">
-        <ResultSpeechButton key={result.createdAt} result={result} />
-      </div>
+      <section className="section-divider mt-7 border-t-2 pt-6">
+        <h2 className="ink text-xl font-black">이 문자는 무엇을 요구하나요?</h2>
+        <p className="ink mt-3 text-lg font-bold leading-relaxed">
+          {result.ai.summary || "내용을 요약하지 못했습니다."}
+        </p>
+        <p className="ink mt-4 text-lg font-extrabold">
+          {result.ai.messageType === undefined
+            ? result.ai.infoType || "분류 없음"
+            : MESSAGE_TYPE_LABEL[result.ai.messageType]}
+        </p>
+        {requestedActionLabels.length > 0 ? (
+          <ul className="mt-4 space-y-2">
+            {requestedActionLabels.map((action) => (
+              <li key={action} className="surface-muted ink rounded-lg px-3 py-2 font-semibold">
+                상대의 요구: {action}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="support-copy mt-3">뚜렷하게 요구한 행동을 확인하지 못했습니다.</p>
+        )}
+        {result.warnings?.map((warning) => (
+          <p key={warning.code} className="support-copy mt-2">
+            {warning.message}
+          </p>
+        ))}
+      </section>
+
+      <AnalysisEvidenceView result={result} />
 
       <section className="section-divider mt-7 border-t-2 pt-6">
         <h2 className="ink text-xl font-black">지금 할 일</h2>
-        <p className="ink mt-3 text-lg font-bold leading-relaxed">{result.recommendation}</p>
+        <ul className="mt-4 space-y-2">
+          {immediateActions.map((action) => (
+            <li key={action} className="surface-muted ink rounded-lg px-3 py-2 font-bold leading-relaxed">
+              {action}
+            </li>
+          ))}
+        </ul>
       </section>
 
-      <div className="section-divider mt-7 grid gap-6 border-t-2 pt-6 sm:grid-cols-2 sm:gap-0">
-        <section className="sm:pr-6">
-          <h2 className="ink text-xl font-black">쉬운 말 요약</h2>
-          <p className="ink mt-3 text-lg font-semibold leading-relaxed">
-            {result.ai.summary || "내용을 요약하지 못했습니다."}
-          </p>
-          <p className="support-copy mt-3">
-            {result.ai.used ? "내용을 알아보기 쉽게 정리했습니다." : "규칙 검사 결과를 바탕으로 정리했습니다."}
-          </p>
-          {result.warnings?.map((warning) => (
-            <p key={warning.code} className="support-copy mt-2">
-              {warning.message}
-            </p>
-          ))}
-        </section>
-        <section className="section-divider border-t-2 pt-6 sm:border-t-0 sm:border-l-2 sm:pl-6 sm:pt-0">
-          <h2 className="ink text-xl font-black">이 글은 어떤 종류인가요?</h2>
-          <p className="ink mt-3 text-lg font-bold">{result.ai.infoType || "분류 없음"}</p>
-          <p className="support-copy mt-3">
-            글의 목적을 분류한 결과입니다. 사기·피싱 의심이면 각별히 조심하세요.
-          </p>
-        </section>
-      </div>
+      <section className="section-divider mt-7 border-t-2 pt-6">
+        <h2 className="ink text-xl font-black">이미 행동했나요?</h2>
+        <p className="ink mt-3 text-lg font-bold leading-relaxed">{afterActionGuide}</p>
+      </section>
 
-      <AnalysisEvidenceView result={result} />
+      <div className="mt-7">
+        <ResultSpeechButton key={result.createdAt} result={result} />
+      </div>
 
       <details className="detail-disclosure mt-5 pt-5">
         <summary>걸러낸 개인정보</summary>
@@ -150,7 +178,7 @@ export default function ResultView({ result, onReset }: Props) {
         </button>
       </div>
 
-      {result.sourceUrl && <p className="support-copy mt-4 break-all text-center">출처: {result.sourceUrl}</p>}
+      {result.sourceUrl && <p className="support-copy mt-4 break-all text-center">확인한 링크: {result.sourceUrl}</p>}
     </div>
   );
 }

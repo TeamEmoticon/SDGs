@@ -1,7 +1,5 @@
 // routing.ts
 // 적응형 분석 라우터(순수 함수). 규칙 신호 조합과 텍스트 단서로 분석 모드를 결정한다.
-// 우선순위: ① 명백한 사기 조합 → RULE_ONLY  ② 검증 가능 공공 주장 → GROUNDED_FACT_CHECK  ③ 나머지 → AI_SUMMARY
-// 단일 키워드만으로 확정하지 않고 규칙 두 개 이상의 조합을 사용한다.
 
 import type { AnalysisMode, Signal } from "./types";
 import { ROUTING_REASONS, type RuleOnlyReason } from "./routingPolicy.ts";
@@ -12,6 +10,9 @@ export interface RoutingDecision {
 }
 
 const CREDENTIAL_REQUEST = /인증\s?번호|비밀\s?번호|보안\s?카드|otp|공동\s?인증서|금융\s?인증서/i;
+const FAMILY_IMPERSONATION = /(?:엄마|아빠|할머니|할아버지|누나|언니|형|오빠)\s*(?:나야|저예요)|(?:휴대폰|핸드폰|폰).{0,12}(?:고장|분실|바뀌)/i;
+const FINANCIAL_IMPERSONATION = /(?:은행|카드사|금융기관|금감원|금융감독원).{0,24}(?:입니다|안내|보안|직원|상담)/i;
+const SECRECY_REQUEST = /(?:다른\s*사람|가족|주변).{0,24}(?:말하지|알리지|비밀로)|(?:비밀로|혼자만).{0,24}(?:진행|처리|송금)/i;
 
 // 검증 가능한 공공 주장 판정용
 const PUBLIC_TOPIC =
@@ -36,7 +37,8 @@ function hasId(signals: readonly Signal[], id: string): boolean {
 /** 명백한 사기 조합인지 — 규칙 두 개 이상의 조합(또는 단독으로도 확정적인 요구)으로 판정. */
 export function hasCriticalScamCombination(signals: readonly Signal[], text: string): RuleOnlyReason[] {
   const reasons: RuleOnlyReason[] = [];
-  const impersonation = hasCategory(signals, "impersonation") || hasCategory(signals, "acquaintance");
+  const familyImpersonation = hasCategory(signals, "acquaintance") || FAMILY_IMPERSONATION.test(text);
+  const authorityImpersonation = hasCategory(signals, "impersonation") || FINANCIAL_IMPERSONATION.test(text);
   const money = hasCategory(signals, "money");
   const urgency = hasCategory(signals, "urgency");
   const link = hasCategory(signals, "link");
@@ -46,21 +48,20 @@ export function hasCriticalScamCombination(signals: readonly Signal[], text: str
   const credentialRequest = hasId(signals, "pinfo-secrets") || CREDENTIAL_REQUEST.test(text);
   const remoteControl = hasCategory(signals, "remote");
 
-  if (impersonation && money) reasons.push(ROUTING_REASONS.impersonationWithMoney);
+  if ((familyImpersonation || authorityImpersonation) && money) reasons.push(ROUTING_REASONS.impersonationWithMoney);
+  if (authorityImpersonation && personalInfo) reasons.push(ROUTING_REASONS.impersonationWithPersonalInfo);
   if (money && urgency) reasons.push(ROUTING_REASONS.moneyWithUrgency);
   if (link && urgency) reasons.push(ROUTING_REASONS.linkWithUrgency);
   if (credentialRequest && link) reasons.push(ROUTING_REASONS.credentialRequestWithLink);
   if (remoteControl) reasons.push(ROUTING_REASONS.remoteControlRequest);
   if (appInstall && (money || personalInfo)) reasons.push(ROUTING_REASONS.appInstallWithSensitiveRequest);
   if (coercion && (money || personalInfo)) reasons.push(ROUTING_REASONS.coercionWithPaymentOrPersonalInfo);
+  if (SECRECY_REQUEST.test(text) && money) reasons.push(ROUTING_REASONS.secrecyWithMoney);
 
   return reasons;
 }
 
-/**
- * 검증 가능한 공공 주장인지 — 공공 주제 + (검증 가능한 주장 형태 또는 은폐 주장) + 의견/광고 아님.
- * 예: "정부가 지급을 확정했다"(주제+주장 형태), "병원에서 쉬쉬하는 비밀"(주제+은폐 주장).
- */
+/** @deprecated 보이스피싱 전용 MVP에서는 실행되지 않는다. 기존 타입 호환을 위해 임시 유지한다. */
 export function hasCheckablePublicClaim(text: string): boolean {
   if (!PUBLIC_TOPIC.test(text)) return false;
   if (SOURCE_ATTRIBUTION.test(text) && !HEALTH_HARM_CLAIM.test(text)) return false;
@@ -72,10 +73,6 @@ export function chooseAnalysisMode(signals: readonly Signal[], text: string): Ro
   const scamReasons = hasCriticalScamCombination(signals, text);
   if (scamReasons.length > 0) {
     return { mode: "RULE_ONLY", reasons: scamReasons };
-  }
-
-  if (hasCheckablePublicClaim(text)) {
-    return { mode: "GROUNDED_FACT_CHECK", reasons: [ROUTING_REASONS.checkablePublicClaim] };
   }
 
   return { mode: "AI_SUMMARY", reasons: [ROUTING_REASONS.generalExplanationNeeded] };

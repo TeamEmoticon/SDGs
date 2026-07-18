@@ -4,7 +4,7 @@
 // SSML을 쓰지 않고, 문장 사이 마침표로 자연스러운 쉼을 유도한다.
 
 import type { AnalysisResult } from "./types";
-import { LEVEL_STORY } from "./ui-config.ts";
+import { LEVEL_STORY, REQUESTED_ACTION_LABEL } from "./ui-config.ts";
 
 const MAX_TOTAL_LENGTH = 2_000;
 const MAX_REASONS = 3;
@@ -85,7 +85,10 @@ export function buildSpeechText(result: AnalysisResult): string {
   }
 
   // 4) 지금 할 일 최대 3개 — AI가 제안한 행동이 있으면 그것을, 없으면 권장 안내 한 문장을 읽는다.
-  const actions = result.ai.actions
+  const requestedActions = (result.ai.requestedActions ?? [])
+    .filter((action) => action !== "none")
+    .map((action) => REQUESTED_ACTION_LABEL[action]);
+  const actions = (requestedActions.length > 0 ? requestedActions : result.ai.actions)
     .map((action) => sanitize(action))
     .filter((action) => action.length > 0)
     .slice(0, MAX_ACTIONS);

@@ -27,19 +27,34 @@ test("원격제어 요구 → RULE_ONLY", () => {
   assert.equal(decision.mode, "RULE_ONLY");
 });
 
+test("가족 사칭과 송금 요구 → RULE_ONLY", () => {
+  const decision = route("엄마, 휴대폰이 고장 났어. 지금 이 계좌로 50만 원 보내줘.");
+  assert.equal(decision.mode, "RULE_ONLY");
+});
+
+test("금융기관 사칭과 개인정보 요구 → RULE_ONLY", () => {
+  const decision = route("은행 보안팀입니다. 본인 확인을 위해 주민등록번호를 보내주세요.");
+  assert.equal(decision.mode, "RULE_ONLY");
+});
+
+test("비밀 요구와 송금 요구 → RULE_ONLY", () => {
+  const decision = route("이 일은 다른 가족에게 말하지 말고 지금 계좌로 송금해 주세요.");
+  assert.equal(decision.mode, "RULE_ONLY");
+});
+
 test("평범한 카드 이용 안내 → AI_SUMMARY", () => {
   const decision = route("고객님, 이번 달 카드 대금 결제 예정 안내입니다. 이용해 주셔서 감사합니다.");
   assert.equal(decision.mode, "AI_SUMMARY");
 });
 
-test("정책 지원금 지급 주장 → GROUNDED_FACT_CHECK", () => {
+test("정책 지원금 지급 주장 → AI_SUMMARY", () => {
   const decision = route("다음 달부터 만 65세 이상 모든 국민에게 정부가 매달 30만 원을 지급합니다.");
-  assert.equal(decision.mode, "GROUNDED_FACT_CHECK");
+  assert.equal(decision.mode, "AI_SUMMARY");
 });
 
-test("건강 완치 주장 → GROUNDED_FACT_CHECK", () => {
+test("건강 완치 주장 → AI_SUMMARY", () => {
   const decision = route("이 건강식품을 매일 드시면 암이 완치된다고 합니다.");
-  assert.equal(decision.mode, "GROUNDED_FACT_CHECK");
+  assert.equal(decision.mode, "AI_SUMMARY");
 });
 
 test("단순 의견문 → AI_SUMMARY", () => {

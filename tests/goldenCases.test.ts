@@ -54,18 +54,16 @@ test("원격제어(팀뷰어) 요구 → RULE_ONLY, critical", async () => {
   assert.equal(result.riskLevel, "critical");
 });
 
-// ---- 검증 가능한 공공 주장: GROUNDED_FACT_CHECK ---------------------------
-
-test("정부 지원금 지급 확정 주장 → GROUNDED_FACT_CHECK", async () => {
+test("정부 지원금 지급 확정 주장 → AI_SUMMARY", async () => {
   const result = await analyze(
     "속보! 정부가 다음 달부터 만 19세 이상 전 국민에게 민생지원금 50만원을 조건 없이 지급하기로 확정 발표했습니다.",
   );
-  assert.equal(result.execution?.plannedMode, "GROUNDED_FACT_CHECK");
+  assert.equal(result.execution?.plannedMode, "AI_SUMMARY");
 });
 
-test("건강 완치 은폐 주장(나물/고혈압/당뇨) → GROUNDED_FACT_CHECK", async () => {
+test("건강 완치 은폐 주장도 → AI_SUMMARY", async () => {
   const result = await analyze("이 나물을 3주만 꾸준히 드시면 고혈압과 당뇨가 완치된다고 합니다. 병원에서도 쉬쉬하는 비밀입니다.");
-  assert.equal(result.execution?.plannedMode, "GROUNDED_FACT_CHECK");
+  assert.equal(result.execution?.plannedMode, "AI_SUMMARY");
 });
 
 // ---- 애매한 요청: 규칙 점수는 붙지만 RULE_ONLY까지는 아님 ------------------
@@ -150,9 +148,9 @@ test("예방 표현 뒤 실제 인증 요구가 있으면 RULE_ONLY를 유지한
   atLeast(result.riskLevel, "danger");
 });
 
-test("정상 정부 정책 뉴스는 사칭 신호 없이 사실 확인만 계획한다", async () => {
+test("정상 정부 정책 뉴스는 사칭 신호 없이 요약만 계획한다", async () => {
   const result = await analyze("정부는 내년 최저임금을 인상한다고 발표했습니다.");
-  assert.equal(result.execution?.plannedMode, "GROUNDED_FACT_CHECK");
+  assert.equal(result.execution?.plannedMode, "AI_SUMMARY");
   assert.equal(result.riskLevel, "safe");
   assert.equal(result.signals.some((signal) => signal.id === "impersonate-agency"), false);
 });
@@ -202,9 +200,9 @@ test("공식 고객센터 확인을 권하는 앱 설치 예방 안내는 안전
   assert.equal(result.signals.some((signal) => signal.id === "link-install"), false);
 });
 
-test("지원금 지급 대상 확대 주장은 사실 확인 경로로 보낸다", async () => {
+test("지원금 지급 대상 확대 주장은 요약 경로로 보낸다", async () => {
   const result = await analyze("정부가 재난지원금 지급 대상을 확대한다고 발표했습니다.");
-  assert.equal(result.execution?.plannedMode, "GROUNDED_FACT_CHECK");
+  assert.equal(result.execution?.plannedMode, "AI_SUMMARY");
 });
 
 test("개인정보 미제출 처벌 협박은 명백한 사기로 처리한다", async () => {

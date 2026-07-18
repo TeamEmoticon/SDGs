@@ -343,7 +343,7 @@ export default function Analyzer() {
       {/* ---------------- Footer ---------------- */}
       <footer className="section-divider border-t-2">
         <div className="ink-muted mx-auto w-full max-w-5xl px-4 py-8 text-sm sm:px-6">
-          <p className="ink font-bold">안심글 - 가짜뉴스 검증을 확실하게</p>
+          <p className="ink font-bold">안심글 - 보이스피싱과 스미싱 위험을 미리 확인하세요</p>
           <p className="mt-2 leading-relaxed">
             혹시 믿음직하지 못한 정보는{" "}
             <span className="font-semibold text-[var(--action)]">112(경찰)</span> ·{" "}

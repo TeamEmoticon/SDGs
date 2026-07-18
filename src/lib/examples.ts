@@ -1,7 +1,4 @@
 // examples.ts
-// "예시로 연습하기" 목록에 쓰이는 연습용 문자 원문 데이터
-// (prize 예시 본문 속 이모지는 실제 사기 문자의 특징을 재현하기 위해 의도적으로 남겨둠)
-/** Practice examples that fill the textarea so users can try the tool safely. */
 import type { RiskLevel } from "./types.ts";
 
 export interface Example {
@@ -30,7 +27,7 @@ export const EXAMPLES = [
     id: "family",
     title: "가족인 척 지인 사칭",
     subtitle: "번호가 바뀌었다며 접근",
-    expectedRisk: "danger",
+    expectedRisk: "critical",
     content: `엄마 나야~ 폰이 바뀌었어 번호 좀 저장해둬.
 지금 통화 못하는 상황이라 카톡으로 연락해.
 내 계좌 이체 한도가 걸려서 급한데 돈 좀 보내줄 수 있어?
@@ -42,7 +39,7 @@ export const EXAMPLES = [
     subtitle: "링크를 누르게 만드는 사기",
     expectedRisk: "critical",
     content: `[Web발신]
-고객님, 창사기념 이벤트에 당첨되셨습니다! 축하드립니다 🎉
+고객님, 창사기념 이벤트에 당첨되셨습니다.
 경품 수령을 위해 아래 링크를 클릭해 인증번호를 입력해 주세요.
 http://event-prize-winner.kr/claim?id=7782
 24시간 안에 입력하지 않으면 당첨이 취소됩니다.`,

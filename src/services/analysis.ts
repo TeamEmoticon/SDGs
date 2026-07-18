@@ -2,7 +2,7 @@
 // 공통 분석 오케스트레이션(analyzeCore 역할). Next Route와 Netlify Function이 이 함수만 호출한다.
 // 흐름: 입력 검증 → 마스킹 → 규칙 탐지 → 모드 선택 → (선택적) provider 1회 실행 → AI 검증 → 점수 → 결과.
 
-import { assessDomain } from "../lib/domain.ts";
+import { assessDomain, domainSignals } from "../lib/domain.ts";
 import { maskSensitive } from "../lib/masking.ts";
 import { calculateRisk, deriveFallback, verifyAiAnalysis } from "../lib/risk.ts";
 import { chooseAnalysisMode } from "../lib/routing.ts";
@@ -162,43 +162,30 @@ async function analyzeText(content: string, provider: AnalysisProvider | null): 
   };
 }
 
-async function analyzeUrl(content: string, provider: AnalysisProvider | null): Promise<AnalysisOutcome> {
+async function analyzeUrl(content: string): Promise<AnalysisOutcome> {
   if (content.length === 0 || content.length > URL_LIMIT) {
-    return error(422, "INVALID_URL", "공개 인터넷 주소를 정확히 입력해 주세요.");
+    return error(422, "INVALID_URL", "문자에서 받은 의심 링크 주소를 정확히 입력해 주세요.");
   }
   const domain = assessDomain(content);
-  if (domain === null) return error(422, "INVALID_URL", "공개 인터넷 주소를 정확히 입력해 주세요.");
+  if (domain === null) return error(422, "INVALID_URL", "문자에서 받은 의심 링크 주소를 정확히 입력해 주세요.");
   if (domain.isLocalOrPrivate) return error(422, "BLOCKED_URL", "이 주소는 확인할 수 없습니다. 다른 주소를 넣어주세요.");
 
-  const unreadable = error(
-    422,
-    "URL_UNREADABLE",
-    "이 페이지의 글을 불러오지 못했습니다. 로그인이 필요하거나 자동 읽기를 막았을 수 있어요. 내용을 복사해서 붙여넣어 주세요.",
-  );
-
-  // 키/‌provider가 없으면 페이지 본문을 읽을 수 없다(4A에서는 URL 실연결 없음).
-  if (provider === null) return unreadable;
-
-  let outcome: Awaited<ReturnType<AnalysisProvider["summarize"]>>;
-  try {
-    outcome = await provider.summarize({ kind: "url", url: content });
-  } catch {
-    return unreadable;
-  }
-  if (outcome.kind !== "used") return unreadable;
-
-  const ai = outcome.analysis;
-  const verdict = calculateRisk([], ai);
+  const signals = domainSignals(domain);
+  const ai = deriveFallback(EMPTY_ANALYSIS, signals);
+  const verdict = calculateRisk(signals, ai);
   const execution: AnalysisExecution = {
-    plannedMode: "AI_SUMMARY",
-    executedMode: "AI_SUMMARY",
-    aiStatus: "used",
+    plannedMode: "RULE_ONLY",
+    executedMode: "RULE_ONLY",
+    aiStatus: "skipped",
     fallbackUsed: false,
-    routingReasons: ["url_context"],
+    routingReasons: ["domain_risk_check"],
   };
-  const warnings: ApiWarning[] = domain.warnings.length > 0
-    ? [{ code: "URL_WARNING", message: "주소에 주의할 점이 있어요. 주소를 한 번 더 확인해 주세요." }]
-    : [];
+  const warnings: ApiWarning[] = [
+    { code: "LINK_DOMAIN_ONLY", message: "사이트 내용은 읽지 않고 주소에 있는 위험 신호만 확인했습니다." },
+    ...(domain.warnings.length > 0
+      ? [{ code: "URL_WARNING", message: "주소에 주의할 점이 있어요. 링크를 열지 말고 문자 전체를 함께 확인해 주세요." }]
+      : []),
+  ];
 
   return {
     kind: "success",
@@ -207,7 +194,7 @@ async function analyzeUrl(content: string, provider: AnalysisProvider | null): P
       sourceUrl: content,
       maskedText: "",
       mask: EMPTY_MASK,
-      signals: [],
+      signals,
       ai,
       riskLevel: verdict.level,
       riskScore: verdict.score,
@@ -228,5 +215,5 @@ export async function analyzeInput(
 ): Promise<AnalysisOutcome> {
   const input = readInput(value);
   if (input === null) return error(400, "INVALID_REQUEST", "입력 형식을 확인해 주세요.");
-  return input.type === "url" ? analyzeUrl(input.content, provider) : analyzeText(input.content, provider);
+  return input.type === "url" ? analyzeUrl(input.content) : analyzeText(input.content, provider);
 }

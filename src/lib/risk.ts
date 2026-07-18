@@ -1,4 +1,4 @@
-import type { AiAnalysis, RiskLevel, RiskVerdict, Signal } from "./types";
+import type { AiAnalysis, MessageType, RequestedAction, RiskLevel, RiskVerdict, Signal } from "./types";
 import { RULE_ONLY_FLOORS, isRuleOnlyReason } from "./routingPolicy.ts";
 
 /**
@@ -20,15 +20,37 @@ const RECOMMENDATION: Record<RiskLevel, string> = {
     "여러 위험 신호가 있어 특히 조심해야 합니다. 링크를 누르거나 돈을 보내지 말고 112 또는 1332(금융감독원 콜센터)로 확인해 보세요. 이미 돈을 보냈다면 112에 곧바로 신고하세요.",
 };
 
+function fallbackMessageType(signals: readonly Signal[]): MessageType {
+  if (signals.some((signal) => signal.category === "remote")) return "remote_control_scam";
+  if (signals.some((signal) => signal.category === "acquaintance")) return "family_impersonation";
+  if (signals.some((signal) => signal.category === "personalinfo")) return "credential_theft";
+  if (signals.some((signal) => signal.category === "impersonation")) return "government_impersonation";
+  return "unknown";
+}
+
+function fallbackRequestedActions(signals: readonly Signal[]): readonly RequestedAction[] {
+  const actions: RequestedAction[] = [];
+  if (signals.some((signal) => signal.category === "money")) actions.push("send_money");
+  if (signals.some((signal) => signal.id === "link-install")) actions.push("install_app");
+  if (signals.some((signal) => signal.category === "remote")) actions.push("share_screen");
+  if (signals.some((signal) => signal.category === "personalinfo")) actions.push("enter_credentials");
+  if (signals.some((signal) => signal.category === "link")) actions.push("open_link");
+  return actions.length > 0 ? actions : ["none"];
+}
+
 export function deriveFallback(analysis: AiAnalysis, signals: readonly Signal[]): AiAnalysis {
   if (analysis.used) return analysis;
   const n = signals.length;
   const critical = signals.some((s) => s.severity === "critical");
+  const messageType = fallbackMessageType(signals);
+  const requestedActions = fallbackRequestedActions(signals);
   if (n === 0) {
     return {
       ...analysis,
       summary: "특별한 위험 단어는 발견하지 못했습니다. 내용을 천천히 다시 확인해 보세요.",
       infoType: "일반 안내",
+      messageType,
+      requestedActions,
     };
   }
   const cats = [...new Set(signals.map((s) => s.label))].slice(0, 3).join(", ");
@@ -38,6 +60,8 @@ export function deriveFallback(analysis: AiAnalysis, signals: readonly Signal[])
       critical ? "심각한 신호가 포함되어 있어 주의가 필요합니다." : "내용을 꼼꼼히 확인해 보세요."
     }`,
     infoType: critical ? "사기 의심" : "주의 필요",
+    messageType,
+    requestedActions,
   };
 }
 

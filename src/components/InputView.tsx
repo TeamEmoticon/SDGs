@@ -34,13 +34,13 @@ export default function InputView({
   return (
     <div className="animate-fade">
       <section className="text-center">
-        <p className="hero-eyebrow">문자·인터넷 글 사기 예방</p>
+        <p className="hero-eyebrow">의심 문자·메신저 보이스피싱 예방</p>
         <h1 className="hero-heading mx-auto mt-4 max-w-2xl text-balance">
-          받은 문자나 인터넷 글이 <span className="hero-accent">걱정되시나요?</span>
+          받은 문자나 링크가 <span className="hero-accent">걱정되시나요?</span>
         </h1>
         <p className="hero-copy mx-auto mt-5 max-w-xl text-balance">
-          글을 붙여넣거나 주소만 적어주세요. <br className="hidden sm:block" />
-          위험한 글인지 쉬운 말로 알려드릴게요.
+          의심 문자를 붙여넣거나 링크 주소를 적어주세요. <br className="hidden sm:block" />
+          상대가 무엇을 요구하는지 쉬운 말로 알려드릴게요.
         </p>
       </section>
 
@@ -60,13 +60,13 @@ export default function InputView({
             className="mode-tab rounded-lg px-3 py-3 text-center text-base leading-tight"
             data-active={mode === "url"}
           >
-            인터넷 주소 넣기
+            의심 링크 검사
           </button>
         </div>
 
         {urlNote && mode === "text" && (
           <div className="notice-warning mt-4 rounded-xl p-4 animate-fade" role="status">
-            <p className="font-bold">주소를 읽지 못했어요</p>
+              <p className="font-bold">링크 내용은 읽지 않아요</p>
             <p className="mt-1 font-semibold leading-relaxed">{urlNote}</p>
           </div>
         )}
@@ -75,7 +75,7 @@ export default function InputView({
           {mode === "text" ? (
             <>
               <label htmlFor="text" className="field-label mb-2 block">
-                확인할 문자나 글을 붙여넣어 주세요
+                확인할 문자·메신저 내용을 붙여넣어 주세요
               </label>
               <textarea
                 id="text"
@@ -93,7 +93,7 @@ export default function InputView({
           ) : (
             <>
               <label htmlFor="url" className="field-label mb-2 block">
-                뉴스·블로그·공공기관 페이지 주소를 넣어주세요
+                문자에서 받은 의심 링크 주소를 넣어주세요
               </label>
               <div className="field-control flex items-center gap-2 rounded-xl px-4 transition focus-within:border-[var(--action)]">
                 <input
@@ -102,12 +102,13 @@ export default function InputView({
                   inputMode="url"
                   value={url}
                   onChange={(event) => setUrl(event.target.value)}
-                  placeholder="https://example.com/article"
+                placeholder="https://example.com/link"
                   className="w-full bg-transparent py-4 outline-none"
                 />
               </div>
               <p className="support-copy mt-2 px-1">
-                글을 읽어올 수 없는 페이지면, 글을 복사해 직접 붙여넣어 주세요.
+                링크 주소의 위험 신호만 확인합니다. 사이트 내용의 사실 여부는 판정하지 않아요.
+                더 정확한 확인을 위해 링크가 포함된 문자 전체를 함께 붙여넣어 주세요.
               </p>
             </>
           )}
@@ -125,7 +126,7 @@ export default function InputView({
           disabled={!canSubmit}
           className="button-primary mt-6 flex w-full items-center justify-center rounded-xl px-6 py-4 text-lg disabled:cursor-not-allowed disabled:border-[var(--line)] disabled:bg-[var(--line)] disabled:shadow-none"
         >
-          이 글 확인하기
+          {mode === "url" ? "링크 위험 신호 확인하기" : "문자 확인하기"}
         </button>
       </section>
 

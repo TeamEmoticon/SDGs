@@ -38,9 +38,9 @@ function makeResult(overrides: Partial<AnalysisResult> = {}): AnalysisResult {
 
 test("위험 단계가 화면과 동일한 한국어 문구로 읽힌다", () => {
   const speech = buildSpeechText(makeResult({ riskLevel: "critical" }));
-  assert.ok(speech.includes("사기·피싱일 가능성이 매우 높습니다"));
+  assert.ok(speech.includes("보이스피싱 위험이 매우 높습니다"));
   const safe = buildSpeechText(makeResult({ riskLevel: "safe" }));
-  assert.ok(safe.includes("뚜렷한 위험 신호가 적습니다"));
+  assert.ok(safe.includes("뚜렷한 보이스피싱 신호가 적습니다"));
 });
 
 test("쉬운 요약을 포함한다", () => {

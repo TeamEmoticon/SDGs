@@ -30,7 +30,7 @@ function createGeminiProvider(): AnalysisProvider {
       return toProviderOutcome(await requestGeminiAnalysis(input, "summary"));
     },
     async factCheck(input) {
-      return toProviderOutcome(await requestGeminiAnalysis(input, "grounded"));
+      return toProviderOutcome(await requestGeminiAnalysis(input, "summary"));
     },
   };
 }

@@ -10,15 +10,16 @@ import {
   requestGeminiAnalysis,
 } from "../src/services/gemini.ts";
 
-test("keeps only risk phrases that appear in the masked source", () => {
+test("보이스피싱 응답에서 원문에 있는 의심 문구만 남긴다", () => {
   const result = parseGeminiAnalysis(
     {
       summary: "카드 정지를 이유로 인증을 요구하는 글입니다.",
-      infoType: "금융·공과금 알림",
-      actions: ["링크 접속", "인증번호 입력"],
-      riskPhrases: ["오늘 안에", "원문에 없는 문장"],
-      difficultTerms: [{ term: "본인확인", easyMeaning: "내가 맞는지 확인하는 절차" }],
-      missingInfo: ["공식 고객센터 번호"],
+      messageType: "financial_impersonation",
+      requestedActions: ["open_link", "enter_credentials"],
+      signals: [
+        { quote: "오늘 안에", code: "urgent_payment" },
+        { quote: "원문에 없는 문장", code: "unknown" },
+      ],
     },
     "오늘 안에 링크에서 인증번호를 입력하세요.",
   );
@@ -43,30 +44,18 @@ test("HTTP 상태를 AI 실패 상태로 매핑한다", () => {
   assert.equal(httpStatusToFailure(400), "invalid_response");
 });
 
-test("grounded 요청은 키를 헤더로 보내고 Google Search 도구를 사용한다", () => {
+test("보이스피싱 요약 요청은 키를 헤더로 보내고 검색 도구를 사용하지 않는다", () => {
   const request = buildGeminiRequest({
     source: { kind: "text", maskedText: "정부 지원금은 다음 달부터 지급됩니다." },
-    mode: "grounded",
+    mode: "summary",
     apiKey: "test-key",
   });
 
   assert.equal(request.url.includes("test-key"), false);
   assert.equal(request.init.headers["x-goog-api-key"], "test-key");
   const body = JSON.parse(request.init.body);
-  assert.deepEqual(body.tools, [{ google_search: {} }]);
-  assert.equal(body.generationConfig.responseMimeType, "application/json");
-  assert.equal(body.generationConfig.responseJsonSchema.type, "object");
-});
-
-test("URL 요청은 URL Context 도구를 사용한다", () => {
-  const request = buildGeminiRequest({
-    source: { kind: "url", url: "https://www.iana.org/help/example-domains" },
-    mode: "summary",
-    apiKey: "test-key",
-  });
-
-  const body = JSON.parse(request.init.body);
-  assert.deepEqual(body.tools, [{ url_context: {} }]);
+  assert.equal(body.tools, undefined);
+  assert.deepEqual(body.generationConfig.responseJsonSchema.required, ["messageType", "summary", "requestedActions", "signals"]);
   assert.equal(body.generationConfig.responseMimeType, "application/json");
   assert.equal(body.generationConfig.responseJsonSchema.type, "object");
 });
@@ -164,15 +153,15 @@ test("연결 근거가 없는 Grounding은 근거 부족으로 낮춘다", () =>
   });
 });
 
-test("주입된 fetch로 grounded 응답을 한 번만 처리한다", async () => {
+test("주입된 fetch로 보이스피싱 요약 응답을 한 번만 처리한다", async () => {
   const previousApiKey = process.env.GEMINI_API_KEY;
   process.env.GEMINI_API_KEY = "test-key";
   let calls = 0;
 
   try {
     const outcome = await requestGeminiAnalysis(
-      { kind: "text", maskedText: "IANA가 example.com을 문서 예시용 도메인으로 관리합니다." },
-      "grounded",
+      { kind: "text", maskedText: "엄마, 지금 바로 50만 원만 보내줘." },
+      "summary",
       async (_url, init) => {
         calls += 1;
         assert.equal(new Headers(init.headers).get("x-goog-api-key"), "test-key");
@@ -182,13 +171,9 @@ test("주입된 fetch로 grounded 응답을 한 번만 처리한다", async () =
               content: {
                 parts: [
                   {
-                    text: '{"summary":"문서 예시 도메인 안내입니다.","infoType":"공공 정보","actions":[],"riskPhrases":[],"difficultTerms":[],"missingInfo":[],"factCheck":{"claimQuote":"IANA가 example.com을 문서 예시용 도메인으로 관리합니다.","verdict":"supported","explanation":"IANA 안내에서 example.com을 문서 예시용으로 설명합니다."}}',
+                    text: '{"messageType":"family_impersonation","summary":"가족을 사칭해 급하게 돈을 보내 달라고 하는 내용입니다.","requestedActions":["send_money"],"signals":[{"quote":"50만 원만 보내줘","code":"urgent_payment"}]}',
                   },
                 ],
-              },
-              groundingMetadata: {
-                groundingChunks: [{ web: { title: "IANA", uri: "https://www.iana.org/help/example-domains" } }],
-                groundingSupports: [{ segment: { text: "문서 예시 도메인 안내입니다." }, groundingChunkIndices: [0] }],
               },
             },
           ],
@@ -198,61 +183,26 @@ test("주입된 fetch로 grounded 응답을 한 번만 처리한다", async () =
 
     assert.equal(calls, 1);
     assert.equal(outcome.kind, "success");
-    if (outcome.kind === "success") assert.equal(outcome.analysis.grounding?.sources.length, 1);
+    if (outcome.kind === "success") assert.equal(outcome.analysis.messageType, "family_impersonation");
   } finally {
     if (previousApiKey === undefined) delete process.env.GEMINI_API_KEY;
     else process.env.GEMINI_API_KEY = previousApiKey;
   }
 });
 
-test("URL Context 성공과 읽기 실패를 분리한다", async () => {
-  const previousApiKey = process.env.GEMINI_API_KEY;
-  process.env.GEMINI_API_KEY = "test-key";
+test("URL 입력은 Gemini에 전달하지 않는다", async () => {
+  let calls = 0;
+  const outcome = await requestGeminiAnalysis(
+    { kind: "url", url: "https://short.example/link" },
+    "summary",
+    async () => {
+      calls += 1;
+      return Response.json({});
+    },
+  );
 
-  try {
-    const success = await requestGeminiAnalysis(
-      { kind: "url", url: "https://www.iana.org/help/example-domains" },
-      "summary",
-      async () =>
-        Response.json({
-          candidates: [
-            {
-              content: {
-                parts: [
-                  {
-                    text: '{"summary":"문서 예시 도메인 안내입니다.","infoType":"웹페이지","actions":[],"riskPhrases":[],"difficultTerms":[],"missingInfo":[]}',
-                  },
-                ],
-              },
-              urlContextMetadata: {
-                urlMetadata: [{ urlRetrievalStatus: "URL_RETRIEVAL_STATUS_SUCCESS" }],
-              },
-            },
-          ],
-        }),
-    );
-    const unreadable = await requestGeminiAnalysis(
-      { kind: "url", url: "https://nonexistent.invalid/" },
-      "summary",
-      async () =>
-        Response.json({
-          candidates: [
-            {
-              content: { parts: [{ text: "{}" }] },
-              urlContextMetadata: {
-                urlMetadata: [{ urlRetrievalStatus: "URL_RETRIEVAL_STATUS_UNAVAILABLE" }],
-              },
-            },
-          ],
-        }),
-    );
-
-    assert.equal(success.kind, "success");
-    assert.equal(unreadable.kind, "url-unavailable");
-  } finally {
-    if (previousApiKey === undefined) delete process.env.GEMINI_API_KEY;
-    else process.env.GEMINI_API_KEY = previousApiKey;
-  }
+  assert.equal(calls, 0);
+  assert.deepEqual(outcome, { kind: "failure", status: "invalid_response" });
 });
 
 test("클라이언트 결과 검증기는 grounding 출처를 엄격히 검사한다", () => {

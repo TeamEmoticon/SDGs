@@ -85,6 +85,32 @@ export interface FactCheckResult {
   readonly evidenceStrength: "linked" | "limited";
 }
 
+export const MESSAGE_TYPES = [
+  "family_impersonation",
+  "government_impersonation",
+  "financial_impersonation",
+  "delivery_impersonation",
+  "investment_scam",
+  "remote_control_scam",
+  "credential_theft",
+  "unknown",
+] as const;
+
+export type MessageType = (typeof MESSAGE_TYPES)[number];
+
+export const REQUESTED_ACTIONS = [
+  "send_money",
+  "open_link",
+  "enter_credentials",
+  "install_app",
+  "share_screen",
+  "call_number",
+  "keep_secret",
+  "none",
+] as const;
+
+export type RequestedAction = (typeof REQUESTED_ACTIONS)[number];
+
 export interface AiAnalysis {
   readonly summary: string;
   readonly infoType: string;
@@ -93,6 +119,8 @@ export interface AiAnalysis {
   readonly difficultTerms: readonly DifficultTerm[];
   readonly missingInfo: readonly string[];
   readonly used: boolean;
+  readonly messageType?: MessageType;
+  readonly requestedActions?: readonly RequestedAction[];
   readonly grounding?: GroundingEvidence;
   readonly factCheck?: FactCheckResult;
 }

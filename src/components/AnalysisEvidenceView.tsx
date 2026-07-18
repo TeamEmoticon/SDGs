@@ -1,4 +1,3 @@
-import FactCheckResultView from "@/components/FactCheckResultView";
 import type { AnalysisResult } from "@/lib/types";
 import {
   CATEGORY_META,
@@ -11,20 +10,8 @@ interface Props {
 }
 
 function getEvidenceSummary(result: AnalysisResult): string {
-  const hasRuleEvidence = result.signals.length > 0;
-  const hasPublicSources = result.ai.grounding !== undefined;
-
-  if (hasRuleEvidence && hasPublicSources) {
-    return "원문에서 찾은 위험 문구와 공개 자료를 함께 확인했습니다.";
-  }
-  if (hasPublicSources) {
-    return "글의 공개 주장을 검색 자료와 연결해 확인했습니다.";
-  }
-  if (hasRuleEvidence) {
+  if (result.signals.length > 0) {
     return "원문에서 찾은 문구를 내부 사기 예방 규칙과 대조했습니다.";
-  }
-  if (result.execution?.plannedMode === "GROUNDED_FACT_CHECK") {
-    return "공개 출처 확인이 완료되지 않아 규칙 검사 결과만 보여드립니다.";
   }
   return "원문에서 송금·인증·사칭 같은 뚜렷한 위험 규칙이 발견되지 않았습니다.";
 }
@@ -42,11 +29,9 @@ export default function AnalysisEvidenceView({ result }: Props) {
           {getEvidenceSummary(result)}
         </p>
         <p className="support-copy mt-3 leading-relaxed">
-          규칙 근거는 입력한 글 안에서만 찾으며, 공개 출처는 사실 확인 경로에서 연결된 경우에만 표시합니다.
+          규칙 근거와 AI가 찾은 문구는 입력한 문자 안에서만 확인합니다.
         </p>
       </section>
-
-      {result.ai.factCheck && <FactCheckResultView factCheck={result.ai.factCheck} />}
 
       <details className="detail-disclosure mt-5 pt-5" open={shouldOpenRules}>
         <summary>원문에서 찾은 위험 근거 {result.signals.length}개</summary>
@@ -99,43 +84,6 @@ export default function AnalysisEvidenceView({ result }: Props) {
             ))}
           </ul>
         </details>
-      )}
-
-      {result.ai.grounding && (
-        <section className="section-divider mt-7 border-t-2 pt-6" aria-labelledby="grounding-sources-title">
-          <h3 id="grounding-sources-title" className="ink text-xl font-black">
-            확인에 사용한 공개 출처
-          </h3>
-          <p className="support-copy mt-3 leading-relaxed">
-            Gemini가 Google 검색으로 연결한 자료입니다. 링크를 열어 날짜와 전체 맥락을 함께 확인하세요.
-          </p>
-          <ul className="mt-4 space-y-2">
-            {result.ai.grounding.sources.map((source) => (
-              <li key={source.url} className="surface-muted rounded-lg px-3 py-3">
-                <a
-                  href={source.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="ink break-all font-bold underline decoration-2 underline-offset-4"
-                >
-                  {source.title}
-                </a>
-              </li>
-            ))}
-          </ul>
-          {result.ai.grounding.searchSuggestionHtml && (
-            <iframe
-              title="Google 검색 제안"
-              srcDoc={result.ai.grounding.searchSuggestionHtml}
-              sandbox="allow-popups allow-popups-to-escape-sandbox"
-              referrerPolicy="no-referrer"
-              loading="lazy"
-              width="100%"
-              height="72"
-              className="mt-4 border-0"
-            />
-          )}
-        </section>
       )}
     </div>
   );
