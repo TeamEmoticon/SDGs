@@ -79,6 +79,43 @@ export interface RiskVerdict {
   readonly recommendation: string;
 }
 
+/**
+ * Which analysis path a message is planned for / actually ran through.
+ * RULE_ONLY: obvious scam handled by rules, no AI call.
+ * AI_SUMMARY: easy-language AI explanation.
+ * GROUNDED_FACT_CHECK: a checkable public claim (grounded fact-check path).
+ */
+export type AnalysisMode = "RULE_ONLY" | "AI_SUMMARY" | "GROUNDED_FACT_CHECK";
+
+/** Outcome of the (optional) AI provider call for one analysis. */
+export type AiStatus =
+  | "skipped"
+  | "not_configured"
+  | "used"
+  | "timeout"
+  | "rate_limited"
+  | "blocked"
+  | "invalid_response"
+  | "upstream_error";
+
+/** Every AI failure that must still return a rule-based result (HTTP 200). */
+export type AiFailureStatus = Exclude<AiStatus, "skipped" | "not_configured" | "used">;
+
+/** Planned vs. executed analysis path — useful for tests and debugging. */
+export interface AnalysisExecution {
+  readonly plannedMode: AnalysisMode;
+  readonly executedMode: AnalysisMode;
+  readonly aiStatus: AiStatus;
+  readonly fallbackUsed: boolean;
+  readonly routingReasons: readonly string[];
+}
+
+/** Non-fatal notice attached to a successful (HTTP 200) analysis. */
+export interface ApiWarning {
+  readonly code: string;
+  readonly message: string;
+}
+
 export interface AnalysisResult {
   readonly inputType: InputType;
   readonly sourceUrl: string | null;
@@ -90,4 +127,8 @@ export interface AnalysisResult {
   readonly riskScore: number;
   readonly recommendation: string;
   readonly createdAt: string;
+  /** Optional: how this analysis was routed and executed (backward compatible). */
+  readonly execution?: AnalysisExecution;
+  /** Optional: non-fatal warnings (e.g. AI not configured). */
+  readonly warnings?: readonly ApiWarning[];
 }

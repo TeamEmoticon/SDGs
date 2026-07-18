@@ -16,11 +16,15 @@ interface Props {
 }
 
 const LEVEL_STORY: Record<RiskLevel, string> = {
-  safe: "당장 걱정하지 않아도 되는 글입니다.",
-  caution: "한 번 더 확인이 필요한 글입니다.",
-  danger: "사기·피싱이 의심되는 신호가 있습니다.",
-  critical: "여러 위험 신호가 확인되어 특히 조심해야 합니다.",
+  safe: "뚜렷한 위험 신호가 적습니다.",
+  caution: "한 번 더 확인해 주세요.",
+  danger: "위험 신호가 있습니다.",
+  critical: "위험 신호가 매우 높습니다.",
 };
+
+// 낮은 등급에도 항상 표시하는 안내(안전을 보장하지 않는다).
+const SAFETY_DISCLAIMER =
+  "이 결과가 글의 안전을 보장하지는 않습니다. 금전이나 개인정보를 요구하면 공식 기관에 다시 확인하세요.";
 
 export default function ResultView({ result, onReset }: Props) {
   const ui = RISK_UI[result.riskLevel];
@@ -52,6 +56,7 @@ export default function ResultView({ result, onReset }: Props) {
           <p className="ink-muted text-base font-extrabold">이 글의 위험 단계</p>
           <p className={`risk-text mt-1 text-4xl font-black leading-tight sm:text-5xl`}>{ui.label}</p>
           <p className="ink mt-4 text-lg font-bold">{LEVEL_STORY[result.riskLevel]}</p>
+          <p className="support-copy mt-3 leading-relaxed">{SAFETY_DISCLAIMER}</p>
         </div>
 
         <div className="mt-6">
@@ -90,6 +95,11 @@ export default function ResultView({ result, onReset }: Props) {
           <p className="support-copy mt-3">
             {result.ai.used ? "내용을 알아보기 쉽게 정리했습니다." : "규칙 검사 결과를 바탕으로 정리했습니다."}
           </p>
+          {result.warnings?.map((warning) => (
+            <p key={warning.code} className="support-copy mt-2">
+              {warning.message}
+            </p>
+          ))}
         </section>
         <section className="section-divider border-t-2 pt-6 sm:border-t-0 sm:border-l-2 sm:pl-6 sm:pt-0">
           <h2 className="ink text-xl font-black">이 글은 어떤 종류인가요?</h2>

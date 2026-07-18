@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseGeminiAnalysis } from "../src/services/gemini.ts";
+import { httpStatusToFailure, parseGeminiAnalysis } from "../src/services/gemini.ts";
 
 test("keeps only risk phrases that appear in the masked source", () => {
   const result = parseGeminiAnalysis(
@@ -22,6 +22,13 @@ test("keeps only risk phrases that appear in the masked source", () => {
 
 test("rejects malformed model data", () => {
   assert.equal(parseGeminiAnalysis({ summary: 12 }, "원문"), null);
+});
+
+test("HTTP 상태를 AI 실패 상태로 매핑한다", () => {
+  assert.equal(httpStatusToFailure(429), "rate_limited");
+  assert.equal(httpStatusToFailure(500), "upstream_error");
+  assert.equal(httpStatusToFailure(503), "upstream_error");
+  assert.equal(httpStatusToFailure(400), "upstream_error");
 });
 
 test("limits arrays and removes empty values", () => {

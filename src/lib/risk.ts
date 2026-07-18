@@ -8,8 +8,6 @@ import type { AiAnalysis, RiskLevel, RiskVerdict, Signal } from "./types";
  * 안전(safe) → 주의(caution) → 위험(danger) → 고위험(critical).
  */
 
-const SCAM_HINTS = ["피싱", "사기", "보이스피싱", "스미싱", "의심"];
-
 const RECOMMENDATION: Record<RiskLevel, string> = {
   safe:
     "당장 위험한 정보 요구나 돈을 보내라는 내용은 보이지 않습니다. 다만 보낸 사람이나 링크를 모른다면 가볍게 넘기셔도 좋습니다.",
@@ -42,33 +40,59 @@ export function deriveFallback(analysis: AiAnalysis, signals: readonly Signal[])
   };
 }
 
+/** AI 보조 신호가 위험 점수에 더할 수 있는 총합 상한. */
+export const AI_SIGNAL_SCORE_CAP = 10;
+
+function levelFromScore(score: number): RiskLevel {
+  if (score === 0) return "safe";
+  if (score <= 18) return "caution";
+  if (score <= 45) return "danger";
+  return "critical";
+}
+
+/**
+ * AI 보조 신호를 검증한다.
+ * - 원문(마스킹된 분석 텍스트)에 실제로 존재하는 quote만 남긴다.
+ * - 빈 문자열과 중복을 제거한다.
+ * (Gemini 파서에서도 1차 필터하지만, 주입된 provider까지 방어하기 위해 여기서 다시 확인한다.)
+ */
+export function verifyAiAnalysis(analysis: AiAnalysis, sourceText: string): AiAnalysis {
+  if (!analysis.used) return analysis;
+  const normalizedSource = sourceText.normalize("NFC");
+  const seen = new Set<string>();
+  const riskPhrases = analysis.riskPhrases.filter((phrase) => {
+    const normalized = phrase.normalize("NFC");
+    if (normalized.length === 0) return false;
+    if (!normalizedSource.includes(normalized)) return false;
+    if (seen.has(normalized)) return false;
+    seen.add(normalized);
+    return true;
+  });
+  if (riskPhrases.length === analysis.riskPhrases.length) return analysis;
+  return { ...analysis, riskPhrases };
+}
+
 export function calculateRisk(signals: readonly Signal[], analysis: AiAnalysis): RiskVerdict {
-  let score = signals.reduce((sum, s) => sum + s.weight, 0);
+  const ruleScore = signals.reduce((sum, s) => sum + s.weight, 0);
 
-  // Contribution from the model's suspicious phrases.
-  const phrases = analysis.riskPhrases;
-  if (phrases.length) {
-    score += Math.min(phrases.length * 6, 24);
-  }
-
-  // If the model itself flags the message as a scam, that is a strong signal.
-  const modelSaysScam = analysis.used && SCAM_HINTS.some((h) => analysis.infoType.includes(h));
-  if (modelSaysScam) score += 30;
-
-  score = Math.min(score, 100);
+  // AI 보조 신호는 총합 최대 10점까지만 더한다.
+  const aiScore = analysis.used ? Math.min(analysis.riskPhrases.length * 4, AI_SIGNAL_SCORE_CAP) : 0;
+  const score = Math.min(ruleScore + aiScore, 100);
 
   const hasCritical = signals.some((s) => s.severity === "critical");
 
-  let level: RiskLevel;
-  if (score === 0) level = "safe";
-  else if (score <= 18) level = "caution";
-  else if (score <= 45) level = "danger";
-  else level = "critical";
+  let level = levelFromScore(score);
 
-  // Floor rules so a single critical indicator can't be brushed off.
+  // AI 보조 신호만으로는 danger/critical을 만들지 않는다.
+  // 규칙 점수 기준 등급이 caution 이하이면 등급 상한을 caution으로 제한한다.
+  const ruleLevel = levelFromScore(ruleScore);
+  if ((ruleLevel === "safe" || ruleLevel === "caution") && (level === "danger" || level === "critical")) {
+    level = "caution";
+  }
+
+  // 규칙 기반의 명백한 critical 신호는 등급을 끌어올린다(규칙만으로 확정).
   if (hasCritical && level === "caution") level = "danger";
   if (hasCritical && score >= 50) level = "critical";
-  if (modelSaysScam && level === "caution") level = "danger";
 
   return { level, score, recommendation: RECOMMENDATION[level] };
 }

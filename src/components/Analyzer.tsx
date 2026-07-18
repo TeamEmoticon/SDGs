@@ -50,6 +50,18 @@ function hasApiFlag(value: unknown, key: string): boolean {
   return typeof value === "object" && value !== null && !Array.isArray(value) && Reflect.get(value, key) === true;
 }
 
+// 오류 응답은 { error: { code, message } } 형태(구버전은 { error: "..." } 문자열).
+function readErrorMessage(value: unknown): string | null {
+  if (typeof value !== "object" || value === null) return null;
+  const err = Reflect.get(value, "error");
+  if (typeof err === "string") return err;
+  if (typeof err === "object" && err !== null) {
+    const message = Reflect.get(err, "message");
+    if (typeof message === "string") return message;
+  }
+  return null;
+}
+
 const PIPELINE = [
   { label: "개인정보 가리는 중", sub: "전화번호·계좌번호·인증번호" },
   { label: "위험 신호 찾는 중", sub: "규칙 기반 검사" },
@@ -146,7 +158,7 @@ export default function Analyzer() {
           scrollTop();
           return;
         }
-        throw new Error(readApiMessage(data, "error") ?? "분석 중 문제가 발생했습니다.");
+        throw new Error(readErrorMessage(data) ?? "분석 중 문제가 발생했습니다.");
       }
       if (!isAnalysisResult(data)) throw new Error("분석 결과 형식이 올바르지 않습니다. 다시 시도해 주세요.");
       const analysis = data;

@@ -1,4 +1,4 @@
-import type { AiAnalysis, DifficultTerm } from "../lib/types";
+import type { AiAnalysis, AiFailureStatus, DifficultTerm } from "../lib/types";
 
 const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.1-flash-lite";
@@ -45,7 +45,23 @@ export type GeminiSource =
 export type GeminiOutcome =
   | { readonly kind: "success"; readonly analysis: AiAnalysis }
   | { readonly kind: "url-unavailable" }
-  | { readonly kind: "unavailable" };
+  | { readonly kind: "failure"; readonly status: AiFailureStatus };
+
+/** HTTP 상태 코드를 AI 실패 상태로 매핑한다(네트워크 없이 검증 가능한 순수 함수). */
+export function httpStatusToFailure(status: number): AiFailureStatus {
+  if (status === 429) return "rate_limited";
+  if (status >= 500) return "upstream_error";
+  return "upstream_error";
+}
+
+function isSafetyBlocked(payload: unknown): boolean {
+  if (!isObject(payload)) return false;
+  const feedback = Reflect.get(payload, "promptFeedback");
+  if (isObject(feedback) && typeof Reflect.get(feedback, "blockReason") === "string") return true;
+  const candidates = Reflect.get(payload, "candidates");
+  if (!Array.isArray(candidates)) return false;
+  return candidates.some((candidate) => isObject(candidate) && Reflect.get(candidate, "finishReason") === "SAFETY");
+}
 
 function isObject(value: unknown): value is object {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -142,7 +158,7 @@ function readModelText(value: unknown): string | null {
 
 export async function requestGeminiAnalysis(source: GeminiSource): Promise<GeminiOutcome> {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return { kind: "unavailable" };
+  if (!apiKey) return { kind: "failure", status: "upstream_error" };
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -163,17 +179,27 @@ export async function requestGeminiAnalysis(source: GeminiSource): Promise<Gemin
         },
       }),
     });
-    if (!response.ok) return { kind: "unavailable" };
+    if (!response.ok) return { kind: "failure", status: httpStatusToFailure(response.status) };
 
     const payload: unknown = await response.json();
+    if (isSafetyBlocked(payload)) return { kind: "failure", status: "blocked" };
     if (source.kind === "url" && !hasReadableUrlContext(payload)) return { kind: "url-unavailable" };
     const text = readModelText(payload);
-    if (text === null) return { kind: "unavailable" };
-    const parsed: unknown = JSON.parse(text);
+    if (text === null) return { kind: "failure", status: "invalid_response" };
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      return { kind: "failure", status: "invalid_response" };
+    }
     const analysis = parseGeminiAnalysis(parsed, source.kind === "text" ? source.maskedText : null);
-    return analysis === null ? { kind: "unavailable" } : { kind: "success", analysis };
-  } catch {
-    return { kind: "unavailable" };
+    return analysis === null
+      ? { kind: "failure", status: "invalid_response" }
+      : { kind: "success", analysis };
+  } catch (error) {
+    const status: AiFailureStatus = error instanceof Error && error.name === "AbortError" ? "timeout" : "upstream_error";
+    return { kind: "failure", status };
   } finally {
     clearTimeout(timer);
   }
