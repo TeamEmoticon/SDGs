@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildSpeechText } from "../src/lib/buildSpeechText.ts";
-import { handleTtsRequest, type SpeechClient } from "../src/services/pollyTts.ts";
+import { handleTtsRequest, isPollyConfigured, type SpeechClient } from "../src/services/pollyTts.ts";
 import type { AnalysisResult, Signal } from "../src/lib/types.ts";
 
 // ---- 테스트용 결과 객체 --------------------------------------------------
@@ -168,6 +168,29 @@ test("AWS 키가 없으면 503 TTS_NOT_CONFIGURED (실제 호출 없음)", async
 });
 
 // ---- Polly 서비스 (주입된 mock client, 실제 SDK 호출 없음) ------------------
+
+test("recognizes POLLY_AWS credentials", () => {
+  const savedId = process.env.POLLY_AWS_ACCESS_KEY_ID;
+  const savedSecret = process.env.POLLY_AWS_SECRET_ACCESS_KEY;
+  const savedAwsId = process.env.AWS_ACCESS_KEY_ID;
+  const savedAwsSecret = process.env.AWS_SECRET_ACCESS_KEY;
+  process.env.POLLY_AWS_ACCESS_KEY_ID = "test-polly-access-key";
+  process.env.POLLY_AWS_SECRET_ACCESS_KEY = "test-polly-secret-key";
+  delete process.env.AWS_ACCESS_KEY_ID;
+  delete process.env.AWS_SECRET_ACCESS_KEY;
+  try {
+    assert.equal(isPollyConfigured(), true);
+  } finally {
+    if (savedId === undefined) delete process.env.POLLY_AWS_ACCESS_KEY_ID;
+    else process.env.POLLY_AWS_ACCESS_KEY_ID = savedId;
+    if (savedSecret === undefined) delete process.env.POLLY_AWS_SECRET_ACCESS_KEY;
+    else process.env.POLLY_AWS_SECRET_ACCESS_KEY = savedSecret;
+    if (savedAwsId === undefined) delete process.env.AWS_ACCESS_KEY_ID;
+    else process.env.AWS_ACCESS_KEY_ID = savedAwsId;
+    if (savedAwsSecret === undefined) delete process.env.AWS_SECRET_ACCESS_KEY;
+    else process.env.AWS_SECRET_ACCESS_KEY = savedAwsSecret;
+  }
+});
 
 interface CommandLike {
   input: {

@@ -41,12 +41,39 @@ function fail(status: number, code: string, message: string): TtsFailure {
 
 /** AWS 자격 증명 환경변수가 있는지(값은 확인만, 노출하지 않음). */
 export function isPollyConfigured(): boolean {
-  return Boolean(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY);
+  return Boolean(getPollyAccessKeyId() && getPollySecretAccessKey());
+}
+
+function getPollyAccessKeyId(): string | undefined {
+  return process.env.POLLY_AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID;
+}
+
+function getPollySecretAccessKey(): string | undefined {
+  return process.env.POLLY_AWS_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY;
+}
+
+function getPollyRegion(): string {
+  return process.env.POLLY_AWS_REGION || process.env.AWS_REGION || DEFAULT_REGION;
 }
 
 function createPollyClient(): SpeechClient {
-  // SDK는 AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY / AWS_SESSION_TOKEN / AWS_REGION 을 자동 로드한다.
-  return new PollyClient({ region: process.env.AWS_REGION || DEFAULT_REGION }) as unknown as SpeechClient;
+  const accessKeyId = getPollyAccessKeyId();
+  const secretAccessKey = getPollySecretAccessKey();
+  const sessionToken = process.env.POLLY_AWS_SESSION_TOKEN || process.env.AWS_SESSION_TOKEN;
+  const region = getPollyRegion();
+
+  if (accessKeyId && secretAccessKey) {
+    return new PollyClient({
+      region,
+      credentials: {
+        accessKeyId,
+        secretAccessKey,
+        ...(sessionToken ? { sessionToken } : {}),
+      },
+    }) as unknown as SpeechClient;
+  }
+
+  return new PollyClient({ region }) as unknown as SpeechClient;
 }
 
 /** 서버에서 다시 한 번 공백·제어문자를 정리한다(클라이언트 검증만 믿지 않는다). */
