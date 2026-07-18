@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "node --test tests/analysis.test.ts tests/analysisHistory.test.ts tests/geminiResponse.test.ts tests/routing.test.ts tests/domain.test.ts tests/analyzeFlow.test.ts tests/goldenCases.test.ts"
+    "test": "node --test tests/analysis.test.ts tests/analysisHistory.test.ts tests/geminiResponse.test.ts tests/routing.test.ts tests/domain.test.ts tests/analyzeFlow.test.ts tests/goldenCases.test.ts tests/pwa.test.ts tests/analysisFormState.test.ts tests/securityDeployment.test.ts",
+    "evaluate:analysis": "node --env-file-if-exists=.env.local scripts/evaluate-analysis.ts"
   },
   "dependencies": {
     "next": "16.2.6",
