@@ -132,7 +132,7 @@ async function analyzeText(content: string, provider: AnalysisProvider | null): 
   const signals = detectSignals(mask.text);
   const routing = chooseAnalysisMode(signals, mask.text);
   const { executedMode, aiStatus, fallbackUsed, ai } = await runAiExecution(routing.mode, signals, mask.text, provider);
-  const verdict = calculateRisk(signals, ai);
+  const verdict = calculateRisk(signals, ai, routing.reasons);
 
   const execution: AnalysisExecution = {
     plannedMode: routing.mode,

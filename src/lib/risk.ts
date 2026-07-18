@@ -43,6 +43,42 @@ export function deriveFallback(analysis: AiAnalysis, signals: readonly Signal[])
 /** AI 보조 신호가 위험 점수에 더할 수 있는 총합 상한. */
 export const AI_SIGNAL_SCORE_CAP = 10;
 
+const LEVEL_RANK: Record<RiskLevel, number> = { safe: 0, caution: 1, danger: 2, critical: 3 };
+
+function maxLevel(a: RiskLevel, b: RiskLevel): RiskLevel {
+  return LEVEL_RANK[a] >= LEVEL_RANK[b] ? a : b;
+}
+
+/**
+ * 라우터가 RULE_ONLY로 판정한 "명백한 사기 조합" 중, 계좌 장악·원격 조종처럼
+ * 특히 되돌리기 어려운 유형은 등급 하한을 critical까지 끌어올린다.
+ * 나머지 RULE_ONLY 조합은 최소 danger를 보장한다(신호 가중치가 낮아도
+ * "사기로 판단했는데 화면은 안전"이라는 모순이 생기지 않도록 하는 안전장치).
+ */
+const RULE_ONLY_CRITICAL_REASONS = new Set([
+  "remote_control_request",
+  "impersonation_with_money",
+  "coercion_with_payment_or_personal_info",
+]);
+
+// routing.ts의 hasCriticalScamCombination이 낼 수 있는 이유 코드 전체.
+// 다른 모드(AI_SUMMARY의 "general_explanation_needed" 등)와 겹치지 않도록
+// 반드시 이 집합에 속한 이유 코드가 있을 때만 등급 하한을 적용한다.
+const RULE_ONLY_REASON_CODES = new Set([
+  "impersonation_with_money",
+  "money_with_urgency",
+  "credential_request_with_link",
+  "remote_control_request",
+  "app_install_with_sensitive_request",
+  "coercion_with_payment_or_personal_info",
+]);
+
+function ruleOnlyFloor(routingReasons: readonly string[]): RiskLevel | null {
+  const matched = routingReasons.filter((reason) => RULE_ONLY_REASON_CODES.has(reason));
+  if (matched.length === 0) return null;
+  return matched.some((reason) => RULE_ONLY_CRITICAL_REASONS.has(reason)) ? "critical" : "danger";
+}
+
 function levelFromScore(score: number): RiskLevel {
   if (score === 0) return "safe";
   if (score <= 18) return "caution";
@@ -72,7 +108,11 @@ export function verifyAiAnalysis(analysis: AiAnalysis, sourceText: string): AiAn
   return { ...analysis, riskPhrases };
 }
 
-export function calculateRisk(signals: readonly Signal[], analysis: AiAnalysis): RiskVerdict {
+export function calculateRisk(
+  signals: readonly Signal[],
+  analysis: AiAnalysis,
+  routingReasons: readonly string[] = [],
+): RiskVerdict {
   const ruleScore = signals.reduce((sum, s) => sum + s.weight, 0);
 
   // AI 보조 신호는 총합 최대 10점까지만 더한다.
@@ -93,6 +133,11 @@ export function calculateRisk(signals: readonly Signal[], analysis: AiAnalysis):
   // 규칙 기반의 명백한 critical 신호는 등급을 끌어올린다(규칙만으로 확정).
   if (hasCritical && level === "caution") level = "danger";
   if (hasCritical && score >= 50) level = "critical";
+
+  // 라우터가 RULE_ONLY(명백한 사기 조합)로 판정했다면, 신호 가중치가 낮게 잡혔더라도
+  // "사기로 판단했는데 화면은 안전/주의"라는 모순이 생기지 않도록 등급 하한을 둔다.
+  const floor = ruleOnlyFloor(routingReasons);
+  if (floor !== null) level = maxLevel(level, floor);
 
   return { level, score, recommendation: RECOMMENDATION[level] };
 }

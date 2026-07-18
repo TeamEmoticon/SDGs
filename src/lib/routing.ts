@@ -10,15 +10,17 @@ export interface RoutingDecision {
   readonly reasons: readonly string[];
 }
 
-// 규칙에 대응되지 않는 개념(원격제어·인증번호 요구)만 텍스트로 보조 판정한다.
-const REMOTE_CONTROL = /원격\s?제어|원격\s?지원|화면\s?공유|팀뷰어|teamviewer|애니데스크|anydesk|퀵서포트|quicksupport/i;
+// 규칙(rules.ts)에 대응 카테고리가 있지만, 표현 변형까지 넓게 잡기 위해 텍스트로도 보조 판정한다.
+const REMOTE_CONTROL = /원격\s?제어|원격\s?지원|원격\s?조종|화면\s?공유|팀뷰어|teamviewer|애니데스크|anydesk|퀵서포트|quicksupport/i;
 const CREDENTIAL_REQUEST = /인증\s?번호|비밀\s?번호|보안\s?카드|otp|공동\s?인증서|금융\s?인증서/i;
 
 // 검증 가능한 공공 주장 판정용
 const PUBLIC_TOPIC =
-  /건강|질병|백신|접종|암|정부|정책|지원금|보조금|재난지원|급여|연금|복지|국민|뉴스|보도|기사|연구|논문|통계|법률|법안|시행령/;
+  /건강|질병|백신|접종|암|고혈압|당뇨|혈압|혈당|치매|면역|부작용|의사|병원|제약|정부|정책|지원금|보조금|재난지원|급여|연금|복지|국민|뉴스|보도|기사|연구|논문|통계|법률|법안|시행령/;
 const CHECKABLE_CLAIM =
   /지급(한다|합니다|됩니다|예정)?|폐지(된다|됐다|됩니다)?|시행(한다|된다|됩니다)?|완치(된다|됩니다)?|확정(됐다|됩니다)?|발표(했다|합니다)?|인상|인하|의무화|무료로\s?제공/;
+// 진위를 검증 없이 단정하며 은폐를 주장하는 표현(주제어와 함께면 사실 확인이 필요하다는 강한 신호).
+const CONSPIRACY_CLAIM = /쉬쉬|숨기는|알려지지\s?않은|보도하지\s?않는|아무도\s?모르는|비밀입니다/;
 const OPINION_OR_AD =
   /제\s?생각|개인적으로|인\s?것\s?같|같아요|같습니다|광고|홍보|할인|세일|특가|구매하세요|이벤트\s?참여/;
 
@@ -41,7 +43,7 @@ export function hasCriticalScamCombination(signals: readonly Signal[], text: str
   const personalInfo = hasCategory(signals, "personalinfo");
   const appInstall = hasId(signals, "link-install");
   const credentialRequest = hasId(signals, "pinfo-secrets") || CREDENTIAL_REQUEST.test(text);
-  const remoteControl = REMOTE_CONTROL.test(text);
+  const remoteControl = hasCategory(signals, "remote") || REMOTE_CONTROL.test(text);
 
   if (impersonation && money) reasons.push("impersonation_with_money");
   if (money && urgency) reasons.push("money_with_urgency");
@@ -53,10 +55,14 @@ export function hasCriticalScamCombination(signals: readonly Signal[], text: str
   return reasons;
 }
 
-/** 검증 가능한 공공 주장인지 — 공공 주제 + 검증 가능한 주장 형태 + 의견/광고 아님. */
+/**
+ * 검증 가능한 공공 주장인지 — 공공 주제 + (검증 가능한 주장 형태 또는 은폐 주장) + 의견/광고 아님.
+ * 예: "정부가 지급을 확정했다"(주제+주장 형태), "병원에서 쉬쉬하는 비밀"(주제+은폐 주장).
+ */
 export function hasCheckablePublicClaim(text: string): boolean {
   if (OPINION_OR_AD.test(text)) return false;
-  return PUBLIC_TOPIC.test(text) && CHECKABLE_CLAIM.test(text);
+  if (!PUBLIC_TOPIC.test(text)) return false;
+  return CHECKABLE_CLAIM.test(text) || CONSPIRACY_CLAIM.test(text);
 }
 
 export function chooseAnalysisMode(signals: readonly Signal[], text: string): RoutingDecision {
