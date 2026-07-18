@@ -27,12 +27,10 @@ function toProviderOutcome(outcome: Awaited<ReturnType<typeof requestGeminiAnaly
 function createGeminiProvider(): AnalysisProvider {
   return {
     async summarize(input) {
-      return toProviderOutcome(await requestGeminiAnalysis(input));
+      return toProviderOutcome(await requestGeminiAnalysis(input, "summary"));
     },
-    // Grounded fact-check(Search Grounding)는 Phase 4B로 분리한다.
-    // 지금은 grounding 없이 요약으로 위임해 호출 1회 계약을 유지한다.
     async factCheck(input) {
-      return toProviderOutcome(await requestGeminiAnalysis(input));
+      return toProviderOutcome(await requestGeminiAnalysis(input, "grounded"));
     },
   };
 }

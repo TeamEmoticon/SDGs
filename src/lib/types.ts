@@ -63,6 +63,16 @@ export interface DifficultTerm {
   readonly easyMeaning: string;
 }
 
+export interface GroundingSource {
+  readonly title: string;
+  readonly url: string;
+}
+
+export interface GroundingEvidence {
+  readonly sources: readonly GroundingSource[];
+  readonly searchSuggestionHtml?: string;
+}
+
 export interface AiAnalysis {
   readonly summary: string;
   readonly infoType: string;
@@ -71,6 +81,7 @@ export interface AiAnalysis {
   readonly difficultTerms: readonly DifficultTerm[];
   readonly missingInfo: readonly string[];
   readonly used: boolean;
+  readonly grounding?: GroundingEvidence;
 }
 
 export interface RiskVerdict {
@@ -92,6 +103,7 @@ export type AiStatus =
   | "skipped"
   | "not_configured"
   | "used"
+  | "configuration_error"
   | "timeout"
   | "rate_limited"
   | "blocked"

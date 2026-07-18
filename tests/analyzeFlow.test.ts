@@ -137,7 +137,7 @@ test("로컬/사설 URL → 422 BLOCKED_URL", async () => {
   assert.equal(outcome.code, "BLOCKED_URL");
 });
 
-test("provider 내부 예외는 상위로 전파된다(어댑터에서 500 처리)", async () => {
+test("provider 내부 예외는 HTTP 200 규칙 폴백으로 변환된다", async () => {
   const throwing: AnalysisProvider = {
     async summarize() {
       throw new Error("boom");
@@ -146,5 +146,8 @@ test("provider 내부 예외는 상위로 전파된다(어댑터에서 500 처�
       throw new Error("boom");
     },
   };
-  await assert.rejects(() => analyzeInput(req("고객님, 카드 대금 결제 예정 안내입니다. 감사합니다."), throwing));
+  const result = await successResult(req("고객님, 카드 대금 결제 예정 안내입니다. 감사합니다."), throwing);
+  assert.equal(result.execution?.aiStatus, "upstream_error");
+  assert.equal(result.execution?.fallbackUsed, true);
+  assert.equal(result.ai.used, false);
 });

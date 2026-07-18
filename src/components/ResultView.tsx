@@ -159,6 +159,35 @@ export default function ResultView({ result, onReset }: Props) {
         </details>
       )}
 
+      {result.ai.grounding && (
+        <section className="section-divider mt-7 border-t-2 pt-6">
+          <h2 className="ink text-xl font-black">확인에 사용한 출처</h2>
+          <p className="support-copy mt-3 leading-relaxed">검색으로 확인한 공개 자료입니다. 링크를 열어 원문을 함께 살펴보세요.</p>
+          <ul className="mt-4 space-y-2">
+            {result.ai.grounding.sources.map((source) => (
+              <li key={source.url} className="surface-muted rounded-lg px-3 py-3">
+                <a
+                  href={source.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ink break-all font-bold underline decoration-2 underline-offset-4"
+                >
+                  {source.title}
+                </a>
+              </li>
+            ))}
+          </ul>
+          {result.ai.grounding.searchSuggestionHtml && (
+            <iframe
+              title="Google 검색 제안"
+              srcDoc={result.ai.grounding.searchSuggestionHtml}
+              sandbox="allow-popups allow-popups-to-escape-sandbox"
+              className="mt-4 w-full border-0"
+            />
+          )}
+        </section>
+      )}
+
       <details className="detail-disclosure mt-5 pt-5">
         <summary>걸러낸 개인정보</summary>
         <div className="mt-4">

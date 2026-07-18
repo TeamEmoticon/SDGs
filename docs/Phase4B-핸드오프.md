@@ -57,3 +57,49 @@
 - 키가 없으면 4A와 동일하게 규칙 폴백(회귀 없음).
 - 분석 1건당 호출 ≤1 유지. lint/typecheck/build/test 통과, 네트워크 없는 테스트 유지.
 - 명시적 요청 전 push/merge 없음. 통합 담당자만 `develop` 병합.
+
+---
+
+## 6. Phase 4B 구현 결과 및 Claude 전달 의도
+
+### 구현 완료
+
+- `src/services/gemini.ts`에서 `summary`와 `grounded` 요청 모드를 분리했다.
+- API 키는 URL 쿼리에 넣지 않고 `x-goog-api-key` 헤더로만 전달한다.
+- 일반 요약은 기존 구조화 출력 스키마를 유지한다.
+- Grounding·URL Context는 도구 응답의 JSON을 앱에서 파싱하고, grounding 출처가 없으면 성공으로 인정하지 않는다.
+- 응답 파싱은 `src/services/geminiParsing.ts`로 분리했다.
+- `grounding.sources`에는 HTTP(S) 출처만 넣고, 중복 제거·최대 5개·제목 120자 제한을 적용한다.
+- `src/components/ResultView.tsx`는 검증된 출처 링크와 sandbox iframe으로 Search Suggestions를 표시한다.
+- provider 예외는 텍스트 분석에서 `upstream_error` 규칙 폴백으로, URL 분석에서 `URL_UNREADABLE`로 변환한다.
+- 401·403·404는 `configuration_error`, 408·504는 `timeout`, 429는 `rate_limited`로 매핑한다.
+
+### Claude가 이어서 확인할 의도
+
+이 브랜치의 목적은 새 분석 오케스트레이션을 만드는 것이 아니라, 4A의 라우터·provider 경계·오류 계약을 유지한 채 실제 Gemini 응답만 안전하게 연결하는 것이다.
+
+1. 제한된 테스트 키를 직접 `.env.local`에 넣고 키 값은 출력하지 않는다.
+2. 다음 입력으로 로컬 `/api/analyze`를 확인한다.
+   - 일반 요약: 위험 신호가 없는 카드 결제 안내 문장
+   - Grounding: `IANA가 example.com을 문서 예시용 도메인으로 관리한다고 안내합니다.`
+   - URL 성공: `https://www.iana.org/help/example-domains`
+   - URL 실패: 존재하지 않는 `.invalid` 주소
+3. 결과에서 `plannedMode`, `executedMode`, `aiStatus`, `fallbackUsed`, `ai.grounding.sources`만 확인한다. 키·헤더·전체 환경변수는 출력하지 않는다.
+4. 같은 키를 Netlify Functions 런타임 환경변수에 직접 등록하고 동일한 네 가지 smoke를 반복한다.
+5. 실제 확인 후 키를 회전하거나 폐기한다.
+
+### 자동 검증 결과
+
+- `npm test`: 52개 통과
+- `npm run typecheck`: 통과
+- `npm run lint`: 통과
+- `npm run build`: 통과
+- fetch fixture로 실제 네트워크 없는 요약·Grounding·URL Context 성공/실패를 검증했다.
+- 현재 키 미설정 브라우저에서는 `AI_NOT_CONFIGURED` 폴백과 URL 읽기 실패 안내가 정상 동작했다.
+
+### 변경 범위 및 주의점
+
+- `package.json`, lock 파일, `netlify.toml`, `.env.example`는 변경하지 않았다.
+- AI signal code 확장과 도메인 경고 세분화는 이번 범위에서 제외했다.
+- Gemini 호출은 1회지만 Google Search가 내부적으로 여러 검색 쿼리를 실행할 수 있어 비용은 호출 수와 같지 않을 수 있다.
+- 실제 키 기반 Gemini·Netlify smoke가 끝나기 전에는 4B를 완전 검증으로 보고하지 않는다.

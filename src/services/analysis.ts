@@ -58,6 +58,8 @@ function warningForAiStatus(status: AiStatus): ApiWarning | null {
   switch (status) {
     case "not_configured":
       return { code: "AI_NOT_CONFIGURED", message: "쉬운 말 AI 설명 없이 기본 위험 신호만 확인했습니다." };
+    case "configuration_error":
+      return { code: "AI_CONFIGURATION_ERROR", message: "AI 설정 문제로 기본 위험 신호만 확인했습니다." };
     case "timeout":
       return { code: "AI_TIMEOUT", message: "AI 설명이 지연되어 기본 위험 신호만 확인했습니다." };
     case "rate_limited":
@@ -102,7 +104,12 @@ async function runAiExecution(
   }
 
   const input: ProviderInput = { kind: "text", maskedText };
-  const outcome = plannedMode === "GROUNDED_FACT_CHECK" ? await provider.factCheck(input) : await provider.summarize(input);
+  let outcome: Awaited<ReturnType<AnalysisProvider["summarize"]>>;
+  try {
+    outcome = plannedMode === "GROUNDED_FACT_CHECK" ? await provider.factCheck(input) : await provider.summarize(input);
+  } catch {
+    return fallback("upstream_error");
+  }
 
   if (outcome.kind === "used") {
     return {
@@ -172,7 +179,12 @@ async function analyzeUrl(content: string, provider: AnalysisProvider | null): P
   // 키/‌provider가 없으면 페이지 본문을 읽을 수 없다(4A에서는 URL 실연결 없음).
   if (provider === null) return unreadable;
 
-  const outcome = await provider.summarize({ kind: "url", url: content });
+  let outcome: Awaited<ReturnType<AnalysisProvider["summarize"]>>;
+  try {
+    outcome = await provider.summarize({ kind: "url", url: content });
+  } catch {
+    return unreadable;
+  }
   if (outcome.kind !== "used") return unreadable;
 
   const ai = outcome.analysis;
