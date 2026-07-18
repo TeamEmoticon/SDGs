@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title>안심글</title>
+  <rect width="512" height="512" rx="112" fill="#008d83"/>
+  <path d="M144 170c0-24 20-44 44-44h136c24 0 44 20 44 44v172c0 24-20 44-44 44H188c-24 0-44-20-44-44V170Z" fill="#fffdf7"/>
+  <path d="M192 214h128M192 256h92M192 298h112" fill="none" stroke="#008d83" stroke-linecap="round" stroke-width="28"/>
+  <path d="m332 300 20 20 42-50" fill="none" stroke="#e6611a" stroke-linecap="round" stroke-linejoin="round" stroke-width="26"/>
+</svg>

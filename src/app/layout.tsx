@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
+import PwaRegistration from "@/components/PwaRegistration";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -7,6 +8,10 @@ export const metadata: Metadata = {
   description:
     "문자나 인터넷 글을 붙여넣거나 주소만 넣으면, 사기·보이스피싱 위험을 쉬운 말로 알려드리는 SDGs 디지털 안전 도우미입니다.",
   applicationName: "안심글",
+  icons: {
+    icon: [{ url: "/icons/ansimgle-icon-192.png", sizes: "192x192", type: "image/png" }],
+    apple: [{ url: "/icons/ansimgle-icon-512.png", sizes: "512x512", type: "image/png" }],
+  },
 };
 
 export const viewport: Viewport = {
@@ -23,7 +28,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: PREFERENCE_SCRIPT }} />
       </head>
-      <body className="min-h-[100dvh] antialiased">{children}</body>
+      <body className="min-h-[100dvh] antialiased">
+        {children}
+        <PwaRegistration />
+      </body>
     </html>
   );
 }

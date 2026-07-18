@@ -1,6 +1,7 @@
 "use client";
 
 import type { InputType } from "@/lib/types";
+import PwaInstallButton from "./PwaInstallButton";
 
 interface Props {
   mode: InputType;
@@ -135,6 +136,10 @@ export default function InputView({
         >
           예시로 연습하기
         </button>
+      </section>
+
+      <section className="mx-auto mt-4 max-w-2xl" aria-label="앱 설치">
+        <PwaInstallButton />
       </section>
 
       <section className="trust-guidance mx-auto mt-8 max-w-2xl py-5" aria-label="안심글 사용 안내">
