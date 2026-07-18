@@ -16,70 +16,78 @@ export type SensitiveKind =
 
 /** A single piece of sensitive information that was detected and masked. */
 export interface MaskedSpan {
-  kind: SensitiveKind;
-  original: string;
-  masked: string;
+  readonly kind: SensitiveKind;
+  readonly original: string;
+  readonly masked: string;
 }
 
 export interface MaskResult {
   /** Full text with sensitive parts replaced by ● markers. */
-  text: string;
-  maskedCount: number;
-  counts: Record<SensitiveKind, number>;
-  spans: MaskedSpan[];
+  readonly text: string;
+  readonly maskedCount: number;
+  readonly counts: Readonly<Record<SensitiveKind, number>>;
+  readonly spans: readonly MaskedSpan[];
+}
+
+export interface MaskSummary {
+  readonly maskedCount: number;
+  readonly counts: Readonly<Record<SensitiveKind, number>>;
 }
 
 /** Definition of a single fraud-detection rule. */
 export interface RuleDef {
-  id: string;
-  category: string;
-  severity: Severity;
-  label: string;
-  detail: string;
-  keywords?: string[];
-  regex?: RegExp[];
-  weight?: number;
+  readonly id: string;
+  readonly category: string;
+  readonly severity: Severity;
+  readonly label: string;
+  readonly detail: string;
+  readonly keywords?: readonly string[];
+  readonly regex?: readonly RegExp[];
+  readonly weight?: number;
 }
 
 /** A rule-based risk signal matched in the text. */
 export interface Signal {
-  id: string;
-  category: string;
-  severity: Severity;
-  label: string;
-  detail: string;
+  readonly id: string;
+  readonly category: string;
+  readonly severity: Severity;
+  readonly label: string;
+  readonly detail: string;
   /** Short surrounding snippet of the matched text. */
-  matched: string;
-  weight: number;
+  readonly matched: string;
+  readonly weight: number;
 }
 
-export interface GroqResult {
-  /** Easy-language summary. Empty when Groq is unavailable. */
-  summary: string;
-  /** Classified type of the message. */
-  infoType: string;
-  /** Suspicious candidate phrases pulled out by the model. */
-  riskPhrases: string[];
-  /** Whether the model actually produced a result. */
-  used: boolean;
+export interface DifficultTerm {
+  readonly term: string;
+  readonly easyMeaning: string;
+}
+
+export interface AiAnalysis {
+  readonly summary: string;
+  readonly infoType: string;
+  readonly actions: readonly string[];
+  readonly riskPhrases: readonly string[];
+  readonly difficultTerms: readonly DifficultTerm[];
+  readonly missingInfo: readonly string[];
+  readonly used: boolean;
 }
 
 export interface RiskVerdict {
-  level: RiskLevel;
-  score: number;
-  recommendation: string;
+  readonly level: RiskLevel;
+  readonly score: number;
+  readonly recommendation: string;
 }
 
 export interface AnalysisResult {
-  id: number | null;
-  inputType: InputType;
-  sourceUrl: string | null;
-  maskedText: string;
-  mask: MaskResult;
-  signals: Signal[];
-  groq: GroqResult;
-  riskLevel: RiskLevel;
-  riskScore: number;
-  recommendation: string;
-  createdAt: string;
+  readonly inputType: InputType;
+  readonly sourceUrl: string | null;
+  readonly maskedText: string;
+  readonly mask: MaskSummary;
+  readonly signals: readonly Signal[];
+  readonly ai: AiAnalysis;
+  readonly riskLevel: RiskLevel;
+  readonly riskScore: number;
+  readonly recommendation: string;
+  readonly createdAt: string;
 }

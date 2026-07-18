@@ -30,7 +30,7 @@ export default function InputView({
   urlNote,
   onExamples,
 }: Props) {
-  const canSubmit = (mode === "text" ? text.trim() : url.trim()).length >= 2;
+  const canSubmit = (mode === "text" ? text.trim() : url.trim()).length >= (mode === "text" ? 10 : 8);
 
   return (
     <div className="animate-fade">
@@ -57,7 +57,7 @@ export default function InputView({
         <div className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-100 p-1.5">
           <button
             onClick={() => setMode("text")}
-            className={`flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-base font-bold transition ${
+            className={`flex min-h-12 items-center justify-center gap-2 rounded-xl px-3 py-3 text-center text-base font-bold leading-tight transition ${
               mode === "text"
                 ? "bg-white text-teal-700 shadow-sm"
                 : "text-slate-500 hover:text-slate-700"
@@ -67,7 +67,7 @@ export default function InputView({
           </button>
           <button
             onClick={() => setMode("url")}
-            className={`flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-base font-bold transition ${
+            className={`flex min-h-12 items-center justify-center gap-2 rounded-xl px-3 py-3 text-center text-base font-bold leading-tight transition ${
               mode === "url"
                 ? "bg-white text-teal-700 shadow-sm"
                 : "text-slate-500 hover:text-slate-700"

@@ -1,9 +1,9 @@
-import type { GroqResult, RiskLevel, RiskVerdict, Signal } from "./types";
+import type { AiAnalysis, RiskLevel, RiskVerdict, Signal } from "./types";
 
 /**
  * Final risk computation (done in code, not by the model).
  *
- * Combines the rule-based signal weights with Groq's classification and
+ * Combines the rule-based signal weights with the AI classification and
  * suspicious-phrase extraction into a single 0-100 score and a four-step level:
  * 안전(safe) → 주의(caution) → 위험(danger) → 고위험(critical).
  */
@@ -16,26 +16,25 @@ const RECOMMENDATION: Record<RiskLevel, string> = {
   caution:
     "완전히 안심하기 어려운 부분이 있습니다. 개인정보·인증번호를 요구하거나 돈을 보내라는 내용이 없는지 다시 한 번 살펴보세요.",
   danger:
-    "사기 문자일 가능성이 높습니다. 절대 돈을 보내거나 개인정보·인증번호를 알려주지 마세요. 의심되면 112(경찰)나 1332(금융사기 상담)로 확인해 보세요.",
+    "사기·피싱일 가능성이 높습니다. 돈을 보내거나 개인정보·인증번호를 알려주지 마세요. 의심되면 112(경찰)나 1332(금융사기 상담)로 확인해 보세요.",
   critical:
-    "매우 위험한 사기 문자로 보입니다. 링크를 누르거나 돈을 보내지 말고 즉시 112에 신고하거나 1332(금융감독원 콜센터)로 상담하세요. 이미 돈을 보냈다면 112에 곧바로 신고하세요.",
+    "여러 위험 신호가 있어 특히 조심해야 합니다. 링크를 누르거나 돈을 보내지 말고 112 또는 1332(금융감독원 콜센터)로 확인해 보세요. 이미 돈을 보냈다면 112에 곧바로 신고하세요.",
 };
 
-/** When Groq is unavailable, build a simple fallback from the rule signals. */
-export function deriveFallback(groq: GroqResult, signals: Signal[]): GroqResult {
-  if (groq.used) return groq;
+export function deriveFallback(analysis: AiAnalysis, signals: readonly Signal[]): AiAnalysis {
+  if (analysis.used) return analysis;
   const n = signals.length;
   const critical = signals.some((s) => s.severity === "critical");
   if (n === 0) {
     return {
-      ...groq,
+      ...analysis,
       summary: "특별한 위험 단어는 발견하지 못했습니다. 내용을 천천히 다시 확인해 보세요.",
       infoType: "일반 안내",
     };
   }
   const cats = [...new Set(signals.map((s) => s.label))].slice(0, 3).join(", ");
   return {
-    ...groq,
+    ...analysis,
     summary: `규칙 검사에서 ${n}개의 의심 신호를 찾았습니다(${cats}). ${
       critical ? "심각한 신호가 포함되어 있어 주의가 필요합니다." : "내용을 꼼꼼히 확인해 보세요."
     }`,
@@ -43,17 +42,17 @@ export function deriveFallback(groq: GroqResult, signals: Signal[]): GroqResult 
   };
 }
 
-export function calculateRisk(signals: Signal[], groq: GroqResult): RiskVerdict {
+export function calculateRisk(signals: readonly Signal[], analysis: AiAnalysis): RiskVerdict {
   let score = signals.reduce((sum, s) => sum + s.weight, 0);
 
   // Contribution from the model's suspicious phrases.
-  const phrases = groq.riskPhrases ?? [];
+  const phrases = analysis.riskPhrases;
   if (phrases.length) {
     score += Math.min(phrases.length * 6, 24);
   }
 
   // If the model itself flags the message as a scam, that is a strong signal.
-  const modelSaysScam = groq.used && SCAM_HINTS.some((h) => groq.infoType.includes(h));
+  const modelSaysScam = analysis.used && SCAM_HINTS.some((h) => analysis.infoType.includes(h));
   if (modelSaysScam) score += 30;
 
   score = Math.min(score, 100);

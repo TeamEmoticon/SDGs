@@ -4,10 +4,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { isAnalysisResult } from "@/lib/analysisResult";
 import type { AnalysisResult, InputType } from "@/lib/types";
+import { appendAnalysisHistory } from "@/storage/analysisHistory";
 import InputView from "./InputView";
 import ResultView from "./ResultView";
 import ExamplesModal from "./ExamplesModal";
+import RecentHistory from "./RecentHistory";
 
 type Screen = "input" | "analyzing" | "result";
 export type FontScale = "normal" | "large" | "xl";
@@ -28,6 +31,20 @@ const FONT_NEXT: Record<FontScale, FontScale> = {
   xl: "normal",
 };
 
+function isFontScale(value: string | null): value is FontScale {
+  return value === "normal" || value === "large" || value === "xl";
+}
+
+function readApiMessage(value: unknown, key: string): string | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+  const message = Reflect.get(value, key);
+  return typeof message === "string" ? message : null;
+}
+
+function hasApiFlag(value: unknown, key: string): boolean {
+  return typeof value === "object" && value !== null && !Array.isArray(value) && Reflect.get(value, key) === true;
+}
+
 const PIPELINE = [
   { label: "개인정보 가리는 중", sub: "전화번호·계좌번호·인증번호" },
   { label: "위험 신호 찾는 중", sub: "규칙 기반 검사" },
@@ -43,35 +60,31 @@ export default function Analyzer() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [urlNote, setUrlNote] = useState<string | null>(null);
-  const [fontScale, setFontScale] = useState<FontScale>("normal");
+  const [fontScale, setFontScale] = useState<FontScale>(() => {
+    if (typeof window === "undefined") return "normal";
+    try {
+      const saved = localStorage.getItem("ansim-font");
+      return isFontScale(saved) ? saved : "normal";
+    } catch {
+      return "normal";
+    }
+  });
   const [examplesOpen, setExamplesOpen] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const topRef = useRef<HTMLDivElement>(null);
 
-  // Restore saved font scale.
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("ansim-font") as FontScale | null;
-      if (saved && FONT_PX[saved]) setFontScale(saved);
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
-  // Apply font scale to the root so every rem-based size grows together.
   useEffect(() => {
     document.documentElement.style.fontSize = FONT_PX[fontScale];
     try {
       localStorage.setItem("ansim-font", fontScale);
     } catch {
-      /* ignore */
+      return;
     }
   }, [fontScale]);
 
   // Drive the pipeline animation while analyzing.
   useEffect(() => {
     if (screen !== "analyzing") return;
-    setLoadingStep(0);
     const t = setInterval(() => {
       setLoadingStep((s) => (s < PIPELINE.length ? s + 1 : s));
     }, 650);
@@ -84,6 +97,7 @@ export default function Analyzer() {
   const handleAnalyze = useCallback(async () => {
     setError(null);
     setUrlNote(null);
+    setLoadingStep(0);
     setScreen("analyzing");
     scrollTop();
     try {
@@ -95,18 +109,26 @@ export default function Analyzer() {
           content: mode === "text" ? text : url,
         }),
       });
-      const data = await res.json().catch(() => ({}));
+      let data: unknown;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error("분석 결과를 읽지 못했습니다. 다시 시도해 주세요.");
+      }
       if (!res.ok) {
-        if (data?.urlFetchFailed) {
-          setUrlNote(data.message as string);
+        if (hasApiFlag(data, "urlFetchFailed")) {
+          setUrlNote(readApiMessage(data, "message") ?? "페이지 내용을 읽지 못했습니다. 글을 직접 붙여넣어 주세요.");
           setMode("text");
           setScreen("input");
           scrollTop();
           return;
         }
-        throw new Error(data?.error || "분석 중 문제가 발생했습니다.");
+        throw new Error(readApiMessage(data, "error") ?? "분석 중 문제가 발생했습니다.");
       }
-      setResult(data as AnalysisResult);
+      if (!isAnalysisResult(data)) throw new Error("분석 결과 형식이 올바르지 않습니다. 다시 시도해 주세요.");
+      const analysis = data;
+      appendAnalysisHistory(analysis);
+      setResult(analysis);
       setScreen("result");
       scrollTop();
     } catch (e) {
@@ -121,6 +143,14 @@ export default function Analyzer() {
     setError(null);
     setUrlNote(null);
     setScreen("input");
+    scrollTop();
+  };
+
+  const handleHistoryOpen = (savedResult: AnalysisResult): void => {
+    setResult(savedResult);
+    setError(null);
+    setUrlNote(null);
+    setScreen("result");
     scrollTop();
   };
 
@@ -178,18 +208,21 @@ export default function Analyzer() {
       {/* ---------------- Main ---------------- */}
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 sm:py-10">
         {screen === "input" && (
-          <InputView
-            mode={mode}
-            setMode={setMode}
-            text={text}
-            setText={setText}
-            url={url}
-            setUrl={setUrl}
-            onAnalyze={handleAnalyze}
-            error={error}
-            urlNote={urlNote}
-            onExamples={() => setExamplesOpen(true)}
-          />
+          <>
+            <InputView
+              mode={mode}
+              setMode={setMode}
+              text={text}
+              setText={setText}
+              url={url}
+              setUrl={setUrl}
+              onAnalyze={handleAnalyze}
+              error={error}
+              urlNote={urlNote}
+              onExamples={() => setExamplesOpen(true)}
+            />
+            <RecentHistory onOpen={handleHistoryOpen} />
+          </>
         )}
 
         {screen === "analyzing" && (

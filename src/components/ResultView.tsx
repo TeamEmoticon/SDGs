@@ -21,8 +21,8 @@ interface Props {
 const LEVEL_STORY: Record<RiskLevel, string> = {
   safe: "당장 걱정하지 않아도 되는 글입니다.",
   caution: "한 번 더 확인이 필요한 글입니다.",
-  danger: "사기 문자일 가능성이 높습니다.",
-  critical: "매우 위험한 사기 문자입니다.",
+  danger: "사기·피싱이 의심되는 신호가 있습니다.",
+  critical: "여러 위험 신호가 확인되어 특히 조심해야 합니다.",
 };
 
 function Card({
@@ -133,9 +133,9 @@ export default function ResultView({ result, onReset }: Props) {
         {/* Easy summary */}
         <Card title="쉬운 말 요약">
           <p className="text-lg leading-relaxed text-slate-700">
-            {result.groq.summary || "내용을 요약하지 못했습니다."}
+            {result.ai.summary || "내용을 요약하지 못했습니다."}
           </p>
-          {result.groq.used ? (
+          {result.ai.used ? (
             <p className="mt-3 text-xs font-semibold text-teal-600">AI가 쉬운 말로 정리했어요</p>
           ) : (
             <p className="mt-3 text-xs font-semibold text-slate-400">
@@ -148,7 +148,7 @@ export default function ResultView({ result, onReset }: Props) {
         <Card title="이 글은 어떤 종류?">
           <div className="flex items-center gap-3">
             <span className="rounded-2xl bg-teal-50 px-4 py-2 text-lg font-extrabold text-teal-700 ring-1 ring-teal-200">
-              {result.groq.infoType || "분류 없음"}
+              {result.ai.infoType || "분류 없음"}
             </span>
           </div>
           <p className="mt-3 text-sm text-slate-500">
@@ -197,10 +197,10 @@ export default function ResultView({ result, onReset }: Props) {
       </Card>
 
       {/* ---- AI candidate phrases ---- */}
-      {result.groq.riskPhrases.length > 0 && (
+      {result.ai.riskPhrases.length > 0 && (
         <Card title="AI가 뽑은 의심 구절" tone="muted">
           <ul className="space-y-2">
-            {result.groq.riskPhrases.map((p, i) => (
+            {result.ai.riskPhrases.map((p, i) => (
               <li
                 key={i}
                 className="flex items-start gap-2 rounded-xl bg-white px-3 py-2 text-slate-700 ring-1 ring-slate-100"
@@ -237,11 +237,13 @@ export default function ResultView({ result, onReset }: Props) {
             >
               {showText ? "가려진 글 숨기기" : "개인정보가 가려진 글 보기"}
             </button>
-            {showText && (
+            {showText && (result.maskedText ? (
               <pre className="modal-scroll mt-2 max-h-72 overflow-auto whitespace-pre-wrap rounded-2xl bg-slate-900 p-4 text-sm leading-relaxed text-slate-100 animate-fade">
                 {result.maskedText}
               </pre>
-            )}
+            ) : (
+              <p className="mt-2 rounded-xl bg-slate-100 px-3 py-2 text-sm text-slate-600">기록에는 원문을 저장하지 않았습니다.</p>
+            ))}
           </>
         )}
       </Card>

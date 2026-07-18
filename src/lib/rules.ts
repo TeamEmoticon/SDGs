@@ -6,7 +6,7 @@ import type { RuleDef, Signal } from "./types";
  * Each rule describes a category of fraud pattern (institution impersonation,
  * money demands, personal-info harvesting, etc.). A signal fires when its
  * keyword or regex is found in the text. These signals feed the final risk
- * score alongside the Groq model output.
+ * score alongside the AI model output.
  */
 
 const SEVERITY_WEIGHT = {
