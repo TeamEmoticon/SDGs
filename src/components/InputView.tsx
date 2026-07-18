@@ -1,3 +1,6 @@
+// InputView.tsx
+// 첫 화면: 문자/URL 입력 탭, 입력창, 예시 연습 진입점을 보여주는 컴포넌트
+// (사용 방법 안내는 보류 상태 — 복원 시 git 히스토리의 HelpModal.tsx 참조)
 "use client";
 
 import type { InputType } from "@/lib/types";
@@ -12,7 +15,6 @@ interface Props {
   onAnalyze: () => void;
   error: string | null;
   urlNote: string | null;
-  onHelp: () => void;
   onExamples: () => void;
 }
 
@@ -26,7 +28,6 @@ export default function InputView({
   onAnalyze,
   error,
   urlNote,
-  onHelp,
   onExamples,
 }: Props) {
   const canSubmit = (mode === "text" ? text.trim() : url.trim()).length >= 2;
@@ -36,7 +37,7 @@ export default function InputView({
       {/* Hero */}
       <section className="text-center">
         <span className="inline-flex items-center gap-2 rounded-full bg-teal-100 px-4 py-1.5 text-sm font-bold text-teal-700">
-          🛡️ 문자·인터넷 글 사기 예방
+          문자·인터넷 글 사기 예방
         </span>
         <h1 className="mx-auto mt-5 max-w-2xl text-balance text-4xl font-extrabold leading-tight tracking-tight text-slate-900 sm:text-5xl">
           받은 문자나 인터넷 글이{" "}
@@ -62,7 +63,7 @@ export default function InputView({
                 : "text-slate-500 hover:text-slate-700"
             }`}
           >
-            ✍️ 문자·글 붙여넣기
+            문자·글 붙여넣기
           </button>
           <button
             onClick={() => setMode("url")}
@@ -72,17 +73,15 @@ export default function InputView({
                 : "text-slate-500 hover:text-slate-700"
             }`}
           >
-            🔗 인터넷 주소 넣기
+            인터넷 주소 넣기
           </button>
         </div>
 
         {/* URL fetch notice */}
         {urlNote && mode === "text" && (
-          <div className="mt-4 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-800 animate-fade">
-            <span className="text-xl" aria-hidden>
-              ⚠️
-            </span>
-            <p className="text-sm font-medium leading-relaxed">{urlNote}</p>
+          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-800 animate-fade">
+            <p className="text-sm font-bold">안내</p>
+            <p className="mt-1 text-sm font-medium leading-relaxed">{urlNote}</p>
           </div>
         )}
 
@@ -112,9 +111,6 @@ export default function InputView({
                 뉴스·블로그·공공기관 페이지 주소를 넣어주세요
               </label>
               <div className="flex items-center gap-2 rounded-2xl border-2 border-slate-200 bg-slate-50 px-4 transition focus-within:border-teal-500 focus-within:bg-white">
-                <span className="text-xl text-slate-400" aria-hidden>
-                  🌐
-                </span>
                 <input
                   id="url"
                   type="url"
@@ -144,39 +140,32 @@ export default function InputView({
           disabled={!canSubmit}
           className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-600 px-6 py-4 text-lg font-extrabold text-white shadow-lg shadow-teal-600/25 transition hover:bg-teal-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
         >
-          이 글 확인하기 🔍
+          이 글 확인하기
         </button>
       </section>
 
       {/* Secondary actions */}
-      <section className="mx-auto mt-6 grid max-w-2xl gap-3 sm:grid-cols-2">
-        <button
-          onClick={onHelp}
-          className="flex items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 bg-white px-5 py-4 text-base font-bold text-slate-700 transition hover:border-teal-300 hover:bg-teal-50"
-        >
-          📖 사용 방법 듣기
-        </button>
+      <section className="mx-auto mt-6 max-w-2xl">
         <button
           onClick={onExamples}
-          className="flex items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 bg-white px-5 py-4 text-base font-bold text-slate-700 transition hover:border-teal-300 hover:bg-teal-50"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 bg-white px-5 py-4 text-base font-bold text-slate-700 transition hover:border-teal-300 hover:bg-teal-50"
         >
-          💡 예시로 연습하기
+          예시로 연습하기
         </button>
       </section>
 
       {/* Trust row */}
       <section className="mx-auto mt-8 grid max-w-2xl gap-3 sm:grid-cols-3">
         {[
-          { icon: "🔒", title: "개인정보 보호", desc: "민감한 번호는 가려서 검사해요" },
-          { icon: "⚡", title: "빠른 확인", desc: "규칙과 AI로 위험을 찾아요" },
-          { icon: "💬", title: "쉬운 말", desc: "어려운 말 없이 알려드려요" },
+          { title: "개인정보 보호", desc: "민감한 번호는 가려서 검사해요" },
+          { title: "빠른 확인", desc: "규칙과 AI로 위험을 찾아요" },
+          { title: "쉬운 말", desc: "어려운 말 없이 알려드려요" },
         ].map((f) => (
           <div
             key={f.title}
             className="rounded-2xl border border-slate-200 bg-white/70 p-4 text-center"
           >
-            <div className="text-2xl">{f.icon}</div>
-            <div className="mt-1 text-sm font-bold text-slate-800">{f.title}</div>
+            <div className="text-sm font-bold text-slate-800">{f.title}</div>
             <div className="text-xs text-slate-500">{f.desc}</div>
           </div>
         ))}

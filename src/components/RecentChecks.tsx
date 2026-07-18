@@ -1,3 +1,5 @@
+// RecentChecks.tsx
+// 홈 화면 하단에 최근 확인한 글 목록을 DB에서 불러와 보여주는 서버 컴포넌트
 import { db } from "@/db";
 import { analyses } from "@/db/schema";
 import { desc } from "drizzle-orm";
@@ -34,10 +36,7 @@ export default async function RecentChecks() {
 
   return (
     <section className="mx-auto mt-12 max-w-5xl px-1">
-      <div className="mb-4 flex items-center gap-2">
-        <span className="text-xl" aria-hidden>
-          🕘
-        </span>
+      <div className="mb-4">
         <h2 className="text-lg font-extrabold text-slate-800">최근에 확인한 글</h2>
       </div>
       <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -51,7 +50,7 @@ export default async function RecentChecks() {
             >
               <div className="flex items-center justify-between gap-2">
                 <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${ui.chip}`}>
-                  {ui.emoji} {ui.label}
+                  {ui.label}
                 </span>
                 <span className="text-xs text-slate-500">
                   {r.createdAt.toLocaleDateString("ko-KR", {
@@ -65,7 +64,7 @@ export default async function RecentChecks() {
               </p>
               {r.infoType && (
                 <p className="mt-1 text-xs font-semibold text-slate-500">
-                  {r.inputType === "url" ? "🔗 주소" : "💬 문자"} · {r.infoType}
+                  {r.inputType === "url" ? "주소" : "문자"} · {r.infoType}
                 </p>
               )}
             </li>

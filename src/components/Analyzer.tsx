@@ -1,10 +1,12 @@
+// Analyzer.tsx
+// 앱의 전체 화면 흐름(입력 -> 분석 중 -> 결과)과 상단 바(로고, 글자 크기 버튼)를 담당하는 최상위 컴포넌트
+// (사용 방법 안내는 보류 상태 — 복원 시 git 히스토리의 HelpModal.tsx 참조)
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AnalysisResult, InputType } from "@/lib/types";
 import InputView from "./InputView";
 import ResultView from "./ResultView";
-import HelpModal from "./HelpModal";
 import ExamplesModal from "./ExamplesModal";
 
 type Screen = "input" | "analyzing" | "result";
@@ -27,10 +29,10 @@ const FONT_NEXT: Record<FontScale, FontScale> = {
 };
 
 const PIPELINE = [
-  { emoji: "🔒", label: "개인정보 가리는 중", sub: "전화번호·계좌번호·인증번호" },
-  { emoji: "🔍", label: "위험 신호 찾는 중", sub: "규칙 기반 검사" },
-  { emoji: "🤖", label: "내용 이해하는 중", sub: "AI 쉬운 요약·분류" },
-  { emoji: "📊", label: "위험 단계 계산 중", sub: "최종 판정" },
+  { label: "개인정보 가리는 중", sub: "전화번호·계좌번호·인증번호" },
+  { label: "위험 신호 찾는 중", sub: "규칙 기반 검사" },
+  { label: "내용 이해하는 중", sub: "AI 쉬운 요약·분류" },
+  { label: "위험 단계 계산 중", sub: "최종 판정" },
 ];
 
 export default function Analyzer() {
@@ -42,7 +44,6 @@ export default function Analyzer() {
   const [error, setError] = useState<string | null>(null);
   const [urlNote, setUrlNote] = useState<string | null>(null);
   const [fontScale, setFontScale] = useState<FontScale>("normal");
-  const [helpOpen, setHelpOpen] = useState(false);
   const [examplesOpen, setExamplesOpen] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const topRef = useRef<HTMLDivElement>(null);
@@ -145,8 +146,8 @@ export default function Analyzer() {
             className="flex items-center gap-2.5 text-left"
             aria-label="처음으로"
           >
-            <span className="grid h-10 w-10 place-items-center rounded-2xl bg-teal-600 text-xl shadow-sm shadow-teal-600/30">
-              🛡️
+            <span className="grid h-10 w-10 place-items-center rounded-2xl bg-teal-600 text-lg font-extrabold text-white shadow-sm shadow-teal-600/30">
+              안
             </span>
             <span className="leading-tight">
               <span className="block text-lg font-extrabold tracking-tight text-slate-900">
@@ -168,8 +169,7 @@ export default function Analyzer() {
               aria-label={`글자 크기: ${FONT_LABEL[fontScale]}`}
               title="글자 크기 바꾸기"
             >
-              <span aria-hidden>🔤</span>
-              <span className="hidden sm:inline">글자 {FONT_LABEL[fontScale]}</span>
+              글자 {FONT_LABEL[fontScale]}
             </button>
           </div>
         </div>
@@ -188,7 +188,6 @@ export default function Analyzer() {
             onAnalyze={handleAnalyze}
             error={error}
             urlNote={urlNote}
-            onHelp={() => setHelpOpen(true)}
             onExamples={() => setExamplesOpen(true)}
           />
         )}
@@ -197,8 +196,8 @@ export default function Analyzer() {
           <section className="mx-auto max-w-xl py-10 text-center">
             <div className="relative mx-auto mb-8 grid h-24 w-24 place-items-center">
               <span className="pulse-dot absolute inset-0 text-teal-400" />
-              <span className="grid h-20 w-20 place-items-center rounded-full bg-teal-600 text-4xl shadow-lg shadow-teal-600/30">
-                🛡️
+              <span className="grid h-20 w-20 place-items-center rounded-full bg-teal-600 text-2xl font-extrabold text-white shadow-lg shadow-teal-600/30">
+                안
               </span>
             </div>
             <h2 className="text-2xl font-extrabold text-slate-900">글을 확인하고 있어요</h2>
@@ -220,14 +219,21 @@ export default function Analyzer() {
                     }`}
                   >
                     <span
-                      className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-lg ${
-                        done ? "bg-teal-600 text-white" : "bg-white ring-1 ring-slate-200"
+                      className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-bold ${
+                        done ? "bg-teal-600 text-white" : "bg-white text-slate-500 ring-1 ring-slate-200"
                       }`}
                     >
-                      {done ? "✓" : step.emoji}
+                      {i + 1}
                     </span>
                     <span className="min-w-0">
-                      <span className="block font-bold text-slate-800">{step.label}</span>
+                      <span className="flex flex-wrap items-center gap-2">
+                        <span className="font-bold text-slate-800">{step.label}</span>
+                        {done && (
+                          <span className="rounded-full bg-teal-600 px-2 py-0.5 text-xs font-bold text-white">
+                            완료
+                          </span>
+                        )}
+                      </span>
                       <span className="block text-sm text-slate-500">{step.sub}</span>
                     </span>
                     {active && (
@@ -248,7 +254,7 @@ export default function Analyzer() {
         )}
 
         {screen === "result" && result && (
-          <ResultView result={result} onReset={handleReset} onHelp={() => setHelpOpen(true)} />
+          <ResultView result={result} onReset={handleReset} />
         )}
       </main>
 
@@ -268,7 +274,6 @@ export default function Analyzer() {
         </div>
       </footer>
 
-      <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
       <ExamplesModal
         open={examplesOpen}
         onClose={() => setExamplesOpen(false)}

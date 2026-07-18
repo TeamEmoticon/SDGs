@@ -76,12 +76,12 @@ export function calculateRisk(signals: Signal[], groq: GroqResult): RiskVerdict 
 
 export const RISK_META: Record<
   RiskLevel,
-  { label: string; tone: string; score: string; bar: string; ring: string; emoji: string }
+  { label: string; tone: string; score: string; bar: string; ring: string }
 > = {
-  safe: { label: "안전", tone: "emerald", score: "text-emerald-700", bar: "bg-emerald-500", ring: "ring-emerald-200", emoji: "🟢" },
-  caution: { label: "주의", tone: "amber", score: "text-amber-700", bar: "bg-amber-500", ring: "ring-amber-200", emoji: "🟡" },
-  danger: { label: "위험", tone: "orange", score: "text-orange-700", bar: "bg-orange-500", ring: "ring-orange-200", emoji: "🟠" },
-  critical: { label: "고위험", tone: "red", score: "text-red-700", bar: "bg-red-500", ring: "ring-red-200", emoji: "🔴" },
+  safe: { label: "안전", tone: "emerald", score: "text-emerald-700", bar: "bg-emerald-500", ring: "ring-emerald-200" },
+  caution: { label: "주의", tone: "amber", score: "text-amber-700", bar: "bg-amber-500", ring: "ring-amber-200" },
+  danger: { label: "위험", tone: "orange", score: "text-orange-700", bar: "bg-orange-500", ring: "ring-orange-200" },
+  critical: { label: "고위험", tone: "red", score: "text-red-700", bar: "bg-red-500", ring: "ring-red-200" },
 };
 
 export const LEVEL_ORDER: RiskLevel[] = ["safe", "caution", "danger", "critical"];
