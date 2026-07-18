@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { isAnalysisResult } from "@/lib/analysisResult";
 import type { AnalysisResult, InputType } from "@/lib/types";
 import { appendAnalysisHistory } from "@/storage/analysisHistory";
+import { canAnalyzeForm, createEmptyAnalysisFormState, getAnalysisContent } from "./analysisFormState";
 import InputView from "./InputView";
 import ResultView from "./ResultView";
 import ExamplesModal from "./ExamplesModal";
@@ -98,6 +99,7 @@ export default function Analyzer() {
   const [examplesOpen, setExamplesOpen] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const topRef = useRef<HTMLDivElement>(null);
+  const requestInFlightRef = useRef(false);
 
   useEffect(() => {
     document.documentElement.style.fontSize = FONT_PX[fontScale];
@@ -130,6 +132,10 @@ export default function Analyzer() {
     topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   const handleAnalyze = useCallback(async () => {
+    if (!canAnalyzeForm(mode, text, url) || requestInFlightRef.current) return;
+
+    const content = getAnalysisContent(mode, text, url);
+    requestInFlightRef.current = true;
     setError(null);
     setUrlNote(null);
     setLoadingStep(0);
@@ -141,9 +147,12 @@ export default function Analyzer() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: mode,
-          content: mode === "text" ? text : url,
+          content,
         }),
       });
+      if (res.status === 429) {
+        throw new Error("요청이 많습니다. 1분 뒤 다시 시도해 주세요.");
+      }
       let data: unknown;
       try {
         data = await res.json();
@@ -170,13 +179,20 @@ export default function Analyzer() {
       setError(e instanceof Error ? e.message : "분석 중 문제가 발생했습니다.");
       setScreen("input");
       scrollTop();
+    } finally {
+      requestInFlightRef.current = false;
     }
   }, [mode, text, url]);
 
   const handleReset = () => {
+    const form = createEmptyAnalysisFormState();
+    setMode(form.mode);
+    setText(form.text);
+    setUrl(form.url);
     setResult(null);
-    setError(null);
-    setUrlNote(null);
+    setError(form.error);
+    setUrlNote(form.urlNote);
+    setLoadingStep(0);
     setScreen("input");
     scrollTop();
   };
@@ -208,20 +224,10 @@ export default function Analyzer() {
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <button
             onClick={handleReset}
-            className="flex items-center gap-2.5 text-left"
+            className="ink text-xl font-black tracking-tight"
             aria-label="처음으로"
           >
-            <span className="brand-mark grid h-10 w-10 place-items-center rounded-xl text-lg font-extrabold">
-              안
-            </span>
-            <span className="leading-tight">
-              <span className="ink block text-lg font-extrabold tracking-tight">
-                안심글
-              </span>
-              <span className="block text-[0.7rem] font-semibold text-[var(--action)]">
-                SDGs 디지털 안전 도우미
-              </span>
-            </span>
+            안심글
           </button>
 
           <div className="flex flex-wrap items-center justify-end gap-2">
@@ -337,13 +343,9 @@ export default function Analyzer() {
       {/* ---------------- Footer ---------------- */}
       <footer className="section-divider border-t-2">
         <div className="ink-muted mx-auto w-full max-w-5xl px-4 py-8 text-sm sm:px-6">
-          <p className="ink font-bold">안심글 — 누구나 안전하게 디지털을 쓰는 세상</p>
+          <p className="ink font-bold">안심글 - 가짜뉴스 검증을 확실하게</p>
           <p className="mt-2 leading-relaxed">
-            이 도구는 유엔 지속가능발전목표(SDGs)의{" "}
-            <span className="font-semibold text-[var(--ink-muted)]">
-              16 평화·정의·강력한 기관, 10 불평등 감소, 9 인프라와 혁신
-            </span>{" "}
-            실천을 목표로 만들었습니다. 분석 결과는 참고용이며, 의심되는 즉시{" "}
+            혹시 믿음직하지 못한 정보는{" "}
             <span className="font-semibold text-[var(--action)]">112(경찰)</span> ·{" "}
             <span className="font-semibold text-[var(--action)]">1332(금융사기 상담)</span>로 확인하세요.
           </p>

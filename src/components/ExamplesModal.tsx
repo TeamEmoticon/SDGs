@@ -4,6 +4,7 @@
 
 import Modal from "./Modal";
 import { EXAMPLES } from "@/lib/examples";
+import { RISK_UI } from "@/lib/ui-config";
 
 interface Props {
   open: boolean;
@@ -22,18 +23,25 @@ export default function ExamplesModal({ open, onClose, onPick }: Props) {
         {EXAMPLES.map((ex) => (
           <li key={ex.id}>
             <button
+              type="button"
               onClick={() => onPick(ex.content)}
-              className="surface-panel flex w-full items-center gap-3 rounded-xl p-4 text-left transition hover:bg-[var(--surface-muted)]"
+              className="surface-panel flex w-full items-start gap-3 rounded-xl p-4 text-left transition hover:bg-[var(--surface-muted)]"
             >
-              <span className="min-w-0 flex-1">
+              <span className="flex min-w-0 flex-1 flex-col gap-2">
                 <span className="ink block font-extrabold">{ex.title}</span>
                 <span className="support-copy block">{ex.subtitle}</span>
+                <span
+                  className={`risk-badge ${RISK_UI[ex.expectedRisk].tone} self-start rounded-full px-2.5 py-1 text-sm`}
+                >
+                  예상 결과 · {RISK_UI[ex.expectedRisk].label}
+                </span>
               </span>
             </button>
           </li>
         ))}
       </ul>
       <button
+        type="button"
         onClick={onClose}
         className="button-primary mt-5 w-full rounded-xl px-5 py-3.5"
       >

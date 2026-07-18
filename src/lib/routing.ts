@@ -48,6 +48,7 @@ export function hasCriticalScamCombination(signals: readonly Signal[], text: str
 
   if (impersonation && money) reasons.push(ROUTING_REASONS.impersonationWithMoney);
   if (money && urgency) reasons.push(ROUTING_REASONS.moneyWithUrgency);
+  if (link && urgency) reasons.push(ROUTING_REASONS.linkWithUrgency);
   if (credentialRequest && link) reasons.push(ROUTING_REASONS.credentialRequestWithLink);
   if (remoteControl) reasons.push(ROUTING_REASONS.remoteControlRequest);
   if (appInstall && (money || personalInfo)) reasons.push(ROUTING_REASONS.appInstallWithSensitiveRequest);

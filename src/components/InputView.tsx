@@ -1,6 +1,7 @@
 "use client";
 
 import type { InputType } from "@/lib/types";
+import { canAnalyzeForm } from "./analysisFormState";
 import PwaInstallButton from "./PwaInstallButton";
 
 interface Props {
@@ -28,7 +29,7 @@ export default function InputView({
   urlNote,
   onExamples,
 }: Props) {
-  const canSubmit = (mode === "text" ? text.trim() : url.trim()).length >= (mode === "text" ? 10 : 8);
+  const canSubmit = canAnalyzeForm(mode, text, url);
 
   return (
     <div className="animate-fade">

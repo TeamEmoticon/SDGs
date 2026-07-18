@@ -2,14 +2,8 @@
 
 import { useState } from "react";
 import type { AnalysisResult, RiskLevel, SensitiveKind } from "@/lib/types";
-import FactCheckResultView from "@/components/FactCheckResultView";
-import {
-  CATEGORY_META,
-  RISK_UI,
-  SEVERITY_LABEL,
-  SEVERITY_STYLE,
-  SENSITIVE_LABEL,
-} from "@/lib/ui-config";
+import AnalysisEvidenceView from "@/components/AnalysisEvidenceView";
+import { RISK_UI, SENSITIVE_LABEL } from "@/lib/ui-config";
 
 interface Props {
   result: AnalysisResult;
@@ -19,8 +13,8 @@ interface Props {
 const LEVEL_STORY: Record<RiskLevel, string> = {
   safe: "뚜렷한 위험 신호가 적습니다.",
   caution: "한 번 더 확인해 주세요.",
-  danger: "위험 신호가 있습니다.",
-  critical: "위험 신호가 매우 높습니다.",
+  danger: "사기·피싱일 가능성이 높습니다.",
+  critical: "사기·피싱일 가능성이 매우 높습니다. 지금 행동을 멈추세요.",
 };
 
 // 낮은 등급에도 항상 표시하는 안내(안전을 보장하지 않는다).
@@ -31,7 +25,6 @@ export default function ResultView({ result, onReset }: Props) {
   const ui = RISK_UI[result.riskLevel];
   const [showText, setShowText] = useState(false);
   const score = Math.round(result.riskScore);
-  const shouldOpenDetails = result.riskLevel === "danger" || result.riskLevel === "critical";
   const sensitiveKinds = (Object.keys(result.mask.counts) as SensitiveKind[]).filter(
     (kind) => result.mask.counts[kind] > 0,
   );
@@ -111,85 +104,7 @@ export default function ResultView({ result, onReset }: Props) {
         </section>
       </div>
 
-      {result.ai.factCheck && <FactCheckResultView factCheck={result.ai.factCheck} />}
-
-      <details className="detail-disclosure mt-7 pt-5" open={shouldOpenDetails}>
-        <summary>찾아낸 위험 신호 {result.signals.length}개</summary>
-        <div className="mt-4">
-          {result.signals.length === 0 ? (
-            <p className="surface-muted ink rounded-xl p-4 font-semibold">
-              규칙 검사에서 위험 신호가 발견되지 않았어요.
-            </p>
-          ) : (
-            <ul className="space-y-4">
-              {result.signals.map((signal) => {
-                const category = CATEGORY_META[signal.category] ?? { label: signal.category };
-                return (
-                  <li key={signal.id} className="section-divider border-b-2 pb-4 last:border-b-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="ink font-extrabold">{signal.label}</span>
-                      <span className="surface-muted ink-muted rounded-full px-2.5 py-1 text-sm font-bold">
-                        {category.label}
-                      </span>
-                      <span className={`risk-badge ${SEVERITY_STYLE[signal.severity]} rounded-full px-2.5 py-1 text-sm`}>
-                        {SEVERITY_LABEL[signal.severity]}
-                      </span>
-                    </div>
-                    {signal.matched && (
-                      <p className="surface-muted ink mt-3 rounded-lg px-3 py-2 font-semibold">
-                        “{signal.matched}”
-                      </p>
-                    )}
-                    <p className="ink-muted mt-3 font-semibold leading-relaxed">{signal.detail}</p>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-      </details>
-
-      {result.ai.riskPhrases.length > 0 && (
-        <details className="detail-disclosure mt-5 pt-5">
-          <summary>주의할 문장</summary>
-          <ul className="mt-4 space-y-2">
-            {result.ai.riskPhrases.map((phrase, index) => (
-              <li key={`${phrase}-${index}`} className="surface-muted ink rounded-lg px-3 py-2 font-semibold">
-                {phrase}
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
-
-      {result.ai.grounding && (
-        <section className="section-divider mt-7 border-t-2 pt-6">
-          <h2 className="ink text-xl font-black">확인에 사용한 출처</h2>
-          <p className="support-copy mt-3 leading-relaxed">검색으로 확인한 공개 자료입니다. 링크를 열어 원문을 함께 살펴보세요.</p>
-          <ul className="mt-4 space-y-2">
-            {result.ai.grounding.sources.map((source) => (
-              <li key={source.url} className="surface-muted rounded-lg px-3 py-3">
-                <a
-                  href={source.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="ink break-all font-bold underline decoration-2 underline-offset-4"
-                >
-                  {source.title}
-                </a>
-              </li>
-            ))}
-          </ul>
-          {result.ai.grounding.searchSuggestionHtml && (
-            <iframe
-              title="Google 검색 제안"
-              srcDoc={result.ai.grounding.searchSuggestionHtml}
-              sandbox="allow-popups allow-popups-to-escape-sandbox"
-              className="mt-4 w-full border-0"
-            />
-          )}
-        </section>
-      )}
+      <AnalysisEvidenceView result={result} />
 
       <details className="detail-disclosure mt-5 pt-5">
         <summary>걸러낸 개인정보</summary>

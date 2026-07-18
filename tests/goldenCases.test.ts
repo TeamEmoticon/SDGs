@@ -3,6 +3,7 @@
 // 키 없이(provider=null) 규칙 엔진만으로 검증한다 — AI가 꺼져도 지켜져야 할 안전망이기 때문이다.
 import assert from "node:assert/strict";
 import test from "node:test";
+import { EXAMPLES } from "../src/lib/examples.ts";
 import { analyzeInput } from "../src/services/analysis.ts";
 import type { RiskLevel } from "../src/lib/types.ts";
 
@@ -121,8 +122,27 @@ test("계좌번호를 보내 달라는 일상 요청 → caution", async () => {
 test("원격제어 RULE_ONLY 결과의 점수는 critical 범위", async () => {
   const result = await analyze("고객님 컴퓨터가 해킹되었습니다. 복구를 위해 팀뷰어 원격제어 앱을 설치하고 접속 번호를 알려주세요.");
   assert.equal(result.riskLevel, "critical");
-  assert.ok(result.riskScore >= 46);
+  assert.ok(result.riskScore >= 85);
 });
+
+test("송금 재촉 RULE_ONLY 결과는 danger 점수 구간을 사용한다", async () => {
+  const result = await analyze("지금 급하니 오늘 안으로 30만원을 계좌이체로 보내주세요.");
+  assert.equal(result.riskLevel, "danger");
+  assert.ok(result.riskScore >= 60 && result.riskScore < 85);
+});
+
+test("인증번호와 링크를 함께 요구하면 critical로 표시한다", async () => {
+  const result = await analyze("아래 링크를 눌러 인증번호를 입력하세요. http://bit.ly/verify-me");
+  assert.equal(result.riskLevel, "critical");
+  assert.ok(result.riskScore >= 85);
+});
+
+for (const example of EXAMPLES) {
+  test(`연습 예시 ${example.title}은 안내한 예상 위험 단계와 일치한다`, async () => {
+    const result = await analyze(example.content);
+    assert.equal(result.riskLevel, example.expectedRisk, example.title);
+  });
+}
 
 test("예방 표현 뒤 실제 인증 요구가 있으면 RULE_ONLY를 유지한다", async () => {
   const result = await analyze("인증번호는 알려주지 말고 아래 링크에 직접 입력하세요. http://bit.ly/verify-me");

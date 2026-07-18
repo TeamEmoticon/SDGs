@@ -50,14 +50,17 @@ function maxLevel(a: RiskLevel, b: RiskLevel): RiskLevel {
   return LEVEL_RANK[a] >= LEVEL_RANK[b] ? a : b;
 }
 
+const DISPLAY_SCORE_BANDS = {
+  danger: { minimum: 60, maximum: 84, rawMinimum: 19, rawMaximum: 45 },
+  critical: { minimum: 85, maximum: 100, rawMinimum: 46, rawMaximum: 100 },
+} as const;
+
 /**
  * 라우터가 RULE_ONLY로 판정한 "명백한 사기 조합" 중, 계좌 장악·원격 조종처럼
  * 특히 되돌리기 어려운 유형은 등급 하한을 critical까지 끌어올린다.
  * 나머지 RULE_ONLY 조합은 최소 danger를 보장한다(신호 가중치가 낮아도
  * "사기로 판단했는데 화면은 안전"이라는 모순이 생기지 않도록 하는 안전장치).
  */
-const MINIMUM_SCORE: Record<RiskLevel, number> = { safe: 0, caution: 1, danger: 19, critical: 46 };
-
 function ruleOnlyFloor(routingReasons: readonly string[]): RiskLevel | null {
   const floors = routingReasons.filter(isRuleOnlyReason).map((reason) => RULE_ONLY_FLOORS[reason]);
   if (floors.length === 0) return null;
@@ -69,6 +72,33 @@ function levelFromScore(score: number): RiskLevel {
   if (score <= 18) return "caution";
   if (score <= 45) return "danger";
   return "critical";
+}
+
+function assertNever(value: never): never {
+  throw new Error(`Unhandled risk level: ${value}`);
+}
+
+function scaleDisplayScore(rawScore: number, band: (typeof DISPLAY_SCORE_BANDS)[keyof typeof DISPLAY_SCORE_BANDS]): number {
+  const boundedRawScore = Math.min(Math.max(rawScore, band.rawMinimum), band.rawMaximum);
+  const rawRange = band.rawMaximum - band.rawMinimum;
+  const displayRange = band.maximum - band.minimum;
+
+  return band.minimum + Math.round(((boundedRawScore - band.rawMinimum) / rawRange) * displayRange);
+}
+
+function calibratedDisplayScore(rawScore: number, level: RiskLevel): number {
+  switch (level) {
+    case "safe":
+      return 0;
+    case "caution":
+      return rawScore;
+    case "danger":
+      return scaleDisplayScore(rawScore, DISPLAY_SCORE_BANDS.danger);
+    case "critical":
+      return scaleDisplayScore(rawScore, DISPLAY_SCORE_BANDS.critical);
+    default:
+      return assertNever(level);
+  }
 }
 
 /**
@@ -124,7 +154,7 @@ export function calculateRisk(
   const floor = ruleOnlyFloor(routingReasons);
   if (floor !== null) level = maxLevel(level, floor);
 
-  const score = Math.max(rawScore, MINIMUM_SCORE[level]);
+  const score = calibratedDisplayScore(rawScore, level);
   return { level, score, recommendation: RECOMMENDATION[level] };
 }
 

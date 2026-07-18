@@ -1,5 +1,14 @@
 import { analyzeInput } from "../../src/services/analysis";
 
+export const config = {
+  path: "/api/analyze",
+  rateLimit: {
+    windowLimit: 8,
+    windowSize: 60,
+    aggregateBy: ["ip", "domain"],
+  },
+} as const;
+
 function errorBody(code: string, message: string): Record<string, unknown> {
   const body: Record<string, unknown> = { error: { code, message } };
   if (code === "URL_UNREADABLE") {
