@@ -66,6 +66,29 @@ test("GROUNDED_FACT_CHECK 입력은 factCheck를 최대 1회 호출한다", asyn
   assert.equal(result.execution?.plannedMode, "GROUNDED_FACT_CHECK");
 });
 
+test("사실 판정은 사기 위험 점수와 분리한다", async () => {
+  const provider = new FakeProvider({
+    kind: "used",
+    analysis: {
+      ...usedAnalysis(["IANA", "example.com"]),
+      factCheck: {
+        claimQuote: "IANA가 example.com을 문서 예시용 도메인으로 관리한다",
+        verdict: "supported",
+        explanation: "공개 안내 자료와 일치합니다.",
+        evidenceStrength: "linked",
+      },
+    },
+  });
+  const result = await successResult(
+    req("정부는 IANA가 example.com을 문서 예시용 도메인으로 관리하도록 정책을 시행한다고 발표했습니다."),
+    provider,
+  );
+  assert.equal(result.execution?.plannedMode, "GROUNDED_FACT_CHECK");
+  assert.equal(result.riskScore, 0);
+  assert.equal(result.riskLevel, "safe");
+  assert.equal(result.ai.factCheck?.verdict, "supported");
+});
+
 test("키(provider)가 없으면 not_configured로 규칙 폴백한다", async () => {
   const result = await successResult(req("고객님, 이번 달 카드 대금 결제 예정 안내입니다. 이용해 주셔서 감사합니다."), null);
   assert.equal(result.execution?.plannedMode, "AI_SUMMARY");

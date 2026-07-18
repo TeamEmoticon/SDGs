@@ -37,6 +37,21 @@ function isGrounding(value: unknown): boolean {
   );
 }
 
+function isFactCheck(value: unknown): boolean {
+  if (value === undefined) return true;
+  if (!isObject(value)) return false;
+  const verdict = Reflect.get(value, "verdict");
+  const evidenceStrength = Reflect.get(value, "evidenceStrength");
+  return (
+    typeof Reflect.get(value, "claimQuote") === "string" &&
+    Reflect.get(value, "claimQuote").trim().length > 0 &&
+    typeof Reflect.get(value, "explanation") === "string" &&
+    Reflect.get(value, "explanation").trim().length > 0 &&
+    (verdict === "supported" || verdict === "contradicted" || verdict === "mixed" || verdict === "insufficient_evidence") &&
+    (evidenceStrength === "linked" || evidenceStrength === "limited")
+  );
+}
+
 export function isAnalysisResult(value: unknown): value is AnalysisResult {
   if (!isObject(value)) return false;
   const inputType = Reflect.get(value, "inputType");
@@ -54,6 +69,7 @@ export function isAnalysisResult(value: unknown): value is AnalysisResult {
     Array.isArray(Reflect.get(ai, "riskPhrases")) &&
     typeof Reflect.get(ai, "used") === "boolean" &&
     isGrounding(Reflect.get(ai, "grounding")) &&
+    isFactCheck(Reflect.get(ai, "factCheck")) &&
     Array.isArray(Reflect.get(value, "signals")) &&
     isRiskLevel(Reflect.get(value, "riskLevel")) &&
     typeof Reflect.get(value, "riskScore") === "number" &&

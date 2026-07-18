@@ -54,7 +54,8 @@ test("grounded 요청은 키를 헤더로 보내고 Google Search 도구를 사�
   assert.equal(request.init.headers["x-goog-api-key"], "test-key");
   const body = JSON.parse(request.init.body);
   assert.deepEqual(body.tools, [{ google_search: {} }]);
-  assert.equal(body.generationConfig, undefined);
+  assert.equal(body.generationConfig.responseMimeType, "application/json");
+  assert.equal(body.generationConfig.responseJsonSchema.type, "object");
 });
 
 test("URL 요청은 URL Context 도구를 사용한다", () => {
@@ -66,7 +67,8 @@ test("URL 요청은 URL Context 도구를 사용한다", () => {
 
   const body = JSON.parse(request.init.body);
   assert.deepEqual(body.tools, [{ url_context: {} }]);
-  assert.equal(body.generationConfig, undefined);
+  assert.equal(body.generationConfig.responseMimeType, "application/json");
+  assert.equal(body.generationConfig.responseJsonSchema.type, "object");
 });
 
 test("도구 응답의 코드 펜스 JSON과 검증된 출처를 읽는다", () => {
@@ -102,6 +104,66 @@ test("출처가 없는 grounded 응답은 검증에서 제외한다", () => {
   assert.equal(parseGroundingEvidence({ candidates: [{ groundingMetadata: { groundingChunks: [] } }] }), null);
 });
 
+test("Grounding은 인용한 주장과 근거 수준을 함께 반환한다", () => {
+  const input = "정부가 다음 달부터 모든 국민에게 지원금을 지급한다고 확정 발표했습니다.";
+  const evidence = {
+    sources: [{ title: "공식 안내", url: "https://www.example.com/notice" }],
+    hasLinkedSupport: true,
+  };
+  const analysis = parseGeminiAnalysis(
+    {
+      summary: "지원금 지급 주장입니다.",
+      infoType: "정부·정책",
+      actions: ["공식 안내를 확인하세요."],
+      riskPhrases: [],
+      difficultTerms: [],
+      missingInfo: [],
+      factCheck: {
+        claimQuote: "정부가 다음 달부터 모든 국민에게 지원금을 지급한다고 확정 발표했습니다.",
+        verdict: "contradicted",
+        explanation: "공식 발표 자료에서 같은 내용을 확인하지 못했습니다.",
+      },
+    },
+    input,
+    evidence,
+  );
+
+  assert.deepEqual(Reflect.get(analysis ?? {}, "factCheck"), {
+    claimQuote: input,
+    verdict: "contradicted",
+    explanation: "공식 발표 자료에서 같은 내용을 확인하지 못했습니다.",
+    evidenceStrength: "linked",
+  });
+});
+
+test("연결 근거가 없는 Grounding은 근거 부족으로 낮춘다", () => {
+  const input = "이 건강식품을 드시면 암이 완치된다고 합니다.";
+  const analysis = parseGeminiAnalysis(
+    {
+      summary: "건강식품 완치 주장입니다.",
+      infoType: "건강 정보",
+      actions: ["의료진에게 확인하세요."],
+      riskPhrases: [],
+      difficultTerms: [],
+      missingInfo: [],
+      factCheck: {
+        claimQuote: "이 건강식품을 드시면 암이 완치된다고 합니다.",
+        verdict: "supported",
+        explanation: "검색 자료가 있습니다.",
+      },
+    },
+    input,
+    { sources: [{ title: "자료", url: "https://www.example.com/health" }] },
+  );
+
+  assert.deepEqual(Reflect.get(analysis ?? {}, "factCheck"), {
+    claimQuote: input,
+    verdict: "insufficient_evidence",
+    explanation: "검색 자료가 있습니다.",
+    evidenceStrength: "limited",
+  });
+});
+
 test("주입된 fetch로 grounded 응답을 한 번만 처리한다", async () => {
   const previousApiKey = process.env.GEMINI_API_KEY;
   process.env.GEMINI_API_KEY = "test-key";
@@ -120,12 +182,13 @@ test("주입된 fetch로 grounded 응답을 한 번만 처리한다", async () =
               content: {
                 parts: [
                   {
-                    text: '{"summary":"문서 예시 도메인 안내입니다.","infoType":"공공 정보","actions":[],"riskPhrases":[],"difficultTerms":[],"missingInfo":[]}',
+                    text: '{"summary":"문서 예시 도메인 안내입니다.","infoType":"공공 정보","actions":[],"riskPhrases":[],"difficultTerms":[],"missingInfo":[],"factCheck":{"claimQuote":"IANA가 example.com을 문서 예시용 도메인으로 관리합니다.","verdict":"supported","explanation":"IANA 안내에서 example.com을 문서 예시용으로 설명합니다."}}',
                   },
                 ],
               },
               groundingMetadata: {
                 groundingChunks: [{ web: { title: "IANA", uri: "https://www.iana.org/help/example-domains" } }],
+                groundingSupports: [{ segment: { text: "문서 예시 도메인 안내입니다." }, groundingChunkIndices: [0] }],
               },
             },
           ],

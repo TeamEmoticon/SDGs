@@ -71,6 +71,18 @@ export interface GroundingSource {
 export interface GroundingEvidence {
   readonly sources: readonly GroundingSource[];
   readonly searchSuggestionHtml?: string;
+  readonly hasLinkedSupport?: boolean;
+}
+
+export const FACT_CHECK_VERDICTS = ["supported", "contradicted", "mixed", "insufficient_evidence"] as const;
+
+export type FactCheckVerdict = (typeof FACT_CHECK_VERDICTS)[number];
+
+export interface FactCheckResult {
+  readonly claimQuote: string;
+  readonly verdict: FactCheckVerdict;
+  readonly explanation: string;
+  readonly evidenceStrength: "linked" | "limited";
 }
 
 export interface AiAnalysis {
@@ -82,6 +94,7 @@ export interface AiAnalysis {
   readonly missingInfo: readonly string[];
   readonly used: boolean;
   readonly grounding?: GroundingEvidence;
+  readonly factCheck?: FactCheckResult;
 }
 
 export interface RiskVerdict {

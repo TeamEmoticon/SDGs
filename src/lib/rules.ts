@@ -1,9 +1,10 @@
 import { RULES, SEVERITY_WEIGHT } from "./ruleDefinitions.ts";
 import type { RuleDef, Signal } from "./types.ts";
+import { normalizeAnalysisText } from "./textNormalization.ts";
 
 const CONTEXT_SENSITIVE_RULE_IDS = new Set(["link-install", "money-transfer", "pinfo-secrets", "remote-control"]);
 const SAFETY_ADVISORY =
-  /(?:인증번호|비밀번호|otp|보안카드).{0,30}(?:누구에게도|타인에게|직원도).{0,20}(?:알려주지|요구하지).{0,12}(?:마세요|않습니다)|(?:원격제어|화면 공유|앱 설치).{0,30}(?:절대\s*)?요구하지\s?않습니다|(?:사기|피싱)\s?예방.{0,80}(?:송금|계좌이체|입금).{0,40}(?:112|1332|신고)/i;
+  /(?:인증번호|비밀번호|otp|보안카드).{0,30}(?:누구에게도|타인에게|직원(?:도|은)).{0,20}(?:알려주지|요구하지).{0,12}(?:마세요|않습니다)|(?:누구에게도|타인에게|직원(?:도|은)).{0,30}(?:인증번호|비밀번호|otp|보안카드).{0,20}(?:알려주지|요구하지).{0,12}(?:마세요|않습니다)|(?:원격제어|화면 공유|앱 설치).{0,30}(?:절대\s*)?요구하지\s?않습니다|(?:원격제어|화면 공유|앱 설치).{0,60}(?:공식\s*)?고객센터(?:에|로).{0,24}확인|(?:사기|피싱)\s?예방.{0,80}(?:송금|계좌이체|입금).{0,40}(?:112|1332|신고)/i;
 
 function snippet(text: string, start: number, length: number): string {
   const a = Math.max(0, start - 6);
@@ -29,6 +30,10 @@ function findMatch(rule: RuleDef, text: string, lower: string): { readonly value
 }
 
 function isMoneyTransferRequest(matched: string, nearbyText: string): boolean {
+  if (/^(계좌이체|송금)$/.test(matched)) {
+    if (/(?:보증금|조사비|안전계좌).{0,20}(?:송금|계좌이체).{0,12}않으면/.test(nearbyText)) return true;
+    return /(?:계좌이체|송금).{0,20}(?:해\s?주|하\s?세|보내\s?주|부쳐\s?주|바랍니다)|(?:지금|즉시).{0,20}(?:계좌이체|송금)/.test(nearbyText);
+  }
   if (!/^(보내|부쳐)/.test(matched)) return true;
   return /(?:돈|금액|\d[\d,]*\s*원|계좌로).{0,20}(?:보내|부쳐)|(?:보내|부쳐).{0,20}(?:돈|금액|\d[\d,]*\s*원|계좌로)/.test(nearbyText);
 }
@@ -40,7 +45,7 @@ function shouldKeepMatch(rule: RuleDef, matched: string, nearbyText: string): bo
 }
 
 export function detectSignals(raw: string): Signal[] {
-  const text = raw.normalize("NFC");
+  const text = normalizeAnalysisText(raw);
   const lower = text.toLowerCase();
   const signals: Signal[] = [];
 

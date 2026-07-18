@@ -129,3 +129,72 @@ test("예방 표현 뒤 실제 인증 요구가 있으면 RULE_ONLY를 유지한
   assert.equal(result.execution?.plannedMode, "RULE_ONLY");
   atLeast(result.riskLevel, "danger");
 });
+
+test("정상 정부 정책 뉴스는 사칭 신호 없이 사실 확인만 계획한다", async () => {
+  const result = await analyze("정부는 내년 최저임금을 인상한다고 발표했습니다.");
+  assert.equal(result.execution?.plannedMode, "GROUNDED_FACT_CHECK");
+  assert.equal(result.riskLevel, "safe");
+  assert.equal(result.signals.some((signal) => signal.id === "impersonate-agency"), false);
+});
+
+test("일반 할인 혜택 광고는 환급 미끼 신호 없이 안전하다", async () => {
+  const result = await analyze("가을 할인 이벤트 혜택을 확인하세요.");
+  assert.equal(result.riskLevel, "safe");
+  assert.equal(result.signals.some((signal) => signal.id === "reward-refund"), false);
+});
+
+test("출처를 밝힌 건강 정보는 Grounding 대신 요약한다", async () => {
+  const result = await analyze("질병관리청 발표에 따르면 예방접종은 감염 위험을 낮출 수 있습니다.");
+  assert.equal(result.execution?.plannedMode, "AI_SUMMARY");
+});
+
+test("높임말 앱 설치 요구도 설치 유도 신호로 탐지한다", async () => {
+  const result = await analyze("금융감독원입니다. 보안 앱을 설치하시고 주민등록번호와 계좌번호를 입력하세요.");
+  assert.equal(result.signals.some((signal) => signal.id === "link-install"), true);
+});
+
+test("전각 계좌번호도 마스킹한 뒤 분석한다", async () => {
+  const result = await analyze("계좌번호 １２３４５６７８９０１２로 지금 송금하세요.");
+  assert.equal(result.mask.counts.account, 1);
+  assert.equal(result.maskedText.includes("１２３４５６７８９０１２"), false);
+});
+
+test("제로폭 문자가 낀 송금 요구도 탐지한다", async () => {
+  const result = await analyze("계\u200b좌이\u200b체로 지금 보내주세요.");
+  assert.equal(result.signals.some((signal) => signal.id === "money-transfer"), true);
+});
+
+test("인증번호를 요구하지 않는다는 예방 안내는 안전하게 유지한다", async () => {
+  const result = await analyze("은행 직원은 인증번호를 요구하지 않습니다. 의심스러운 연락은 고객센터로 확인하세요.");
+  assert.equal(result.riskLevel, "safe");
+  assert.equal(result.signals.some((signal) => signal.id === "pinfo-secrets"), false);
+});
+
+test("계좌이체를 언급해도 실제 송금 요구가 아니면 계좌번호 요청만 남긴다", async () => {
+  const result = await analyze("계좌이체로 회비를 보내려고 합니다. 모임 계좌번호를 알려주세요.");
+  assert.equal(result.riskLevel, "caution");
+  assert.equal(result.signals.some((signal) => signal.id === "money-transfer"), false);
+});
+
+test("공식 고객센터 확인을 권하는 앱 설치 예방 안내는 안전하다", async () => {
+  const result = await analyze("보안 앱 설치가 필요하다는 연락을 받으면 먼저 공식 고객센터에 확인하세요.");
+  assert.equal(result.riskLevel, "safe");
+  assert.equal(result.signals.some((signal) => signal.id === "link-install"), false);
+});
+
+test("지원금 지급 대상 확대 주장은 사실 확인 경로로 보낸다", async () => {
+  const result = await analyze("정부가 재난지원금 지급 대상을 확대한다고 발표했습니다.");
+  assert.equal(result.execution?.plannedMode, "GROUNDED_FACT_CHECK");
+});
+
+test("개인정보 미제출 처벌 협박은 명백한 사기로 처리한다", async () => {
+  const result = await analyze("수사기관입니다. 개인정보를 제출하지 않으면 즉시 처벌을 받습니다. 주민등록번호를 보내세요.");
+  assert.equal(result.execution?.plannedMode, "RULE_ONLY");
+  assert.equal(result.riskLevel, "critical");
+});
+
+test("경찰 사칭과 보증금 미송금 협박은 명백한 사기로 처리한다", async () => {
+  const result = await analyze("경찰청 사건 담당자입니다. 보증금을 송금하지 않으면 출석 요구서를 발부합니다.");
+  assert.equal(result.execution?.plannedMode, "RULE_ONLY");
+  assert.equal(result.riskLevel, "critical");
+});

@@ -1,4 +1,5 @@
 import type { MaskResult, MaskedSpan, SensitiveKind } from "./types";
+import { normalizeAnalysisText } from "./textNormalization.ts";
 
 /**
  * Personal-information masking.
@@ -93,7 +94,7 @@ function contextOf(text: string, start: number, end: number): string {
 }
 
 export function maskSensitive(raw: string): MaskResult {
-  const text = raw.normalize("NFC");
+  const text = normalizeAnalysisText(raw);
   const counts: Record<SensitiveKind, number> = {
     phone: 0,
     account: 0,

@@ -1,4 +1,11 @@
-import type { AiAnalysis, DifficultTerm, GroundingEvidence, GroundingSource } from "../lib/types";
+import {
+  FACT_CHECK_VERDICTS,
+  type AiAnalysis,
+  type DifficultTerm,
+  type FactCheckResult,
+  type GroundingEvidence,
+  type GroundingSource,
+} from "../lib/types.ts";
 
 function isObject(value: unknown): value is object {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -7,6 +14,10 @@ function isObject(value: unknown): value is object {
 function readString(object: object, key: string): string | null {
   const value = Reflect.get(object, key);
   return typeof value === "string" ? value.trim() : null;
+}
+
+function isFactCheckVerdict(value: string): value is FactCheckResult["verdict"] {
+  return FACT_CHECK_VERDICTS.some((candidate) => candidate === value);
 }
 
 function readStringList(object: object, key: string, limit: number): readonly string[] {
@@ -35,6 +46,24 @@ function readDifficultTerms(object: object): readonly DifficultTerm[] {
   return terms;
 }
 
+function readFactCheck(value: object, sourceText: string, grounding: GroundingEvidence): FactCheckResult | null {
+  const factCheck = Reflect.get(value, "factCheck");
+  if (!isObject(factCheck)) return null;
+  const claimQuote = readString(factCheck, "claimQuote");
+  const verdict = readString(factCheck, "verdict");
+  const explanation = readString(factCheck, "explanation");
+  if (claimQuote === null || verdict === null || explanation === null) return null;
+  if (!sourceText.normalize("NFC").includes(claimQuote.normalize("NFC"))) return null;
+  if (!isFactCheckVerdict(verdict)) return null;
+
+  return {
+    claimQuote: claimQuote.slice(0, 240),
+    verdict: grounding.hasLinkedSupport === true ? verdict : "insufficient_evidence",
+    explanation: explanation.slice(0, 360),
+    evidenceStrength: grounding.hasLinkedSupport === true ? "linked" : "limited",
+  };
+}
+
 export function parseGeminiAnalysis(
   value: unknown,
   sourceText: string | null,
@@ -50,6 +79,11 @@ export function parseGeminiAnalysis(
     return sourceText.normalize("NFC").includes(phrase.normalize("NFC"));
   });
 
+  const parsedFactCheck =
+    grounding === undefined || sourceText === null ? undefined : readFactCheck(value, sourceText, grounding);
+  if (grounding !== undefined && parsedFactCheck === null) return null;
+  const factCheck = parsedFactCheck ?? undefined;
+
   return {
     summary: summary.slice(0, 500),
     infoType: infoType.slice(0, 40),
@@ -59,6 +93,7 @@ export function parseGeminiAnalysis(
     missingInfo: readStringList(value, "missingInfo", 4),
     used: true,
     ...(grounding === undefined ? {} : { grounding }),
+    ...(factCheck === undefined ? {} : { factCheck }),
   };
 }
 
@@ -89,6 +124,17 @@ function parseGroundingSource(value: unknown): GroundingSource | null {
   return { title: title.slice(0, 120), url };
 }
 
+function hasLinkedSupport(metadata: object): boolean {
+  const supports = Reflect.get(metadata, "groundingSupports");
+  if (!Array.isArray(supports)) return false;
+  return supports.some((support) => {
+    if (!isObject(support)) return false;
+    const segment = Reflect.get(support, "segment");
+    const indexes = Reflect.get(support, "groundingChunkIndices");
+    return isObject(segment) && Array.isArray(indexes) && indexes.some((index) => Number.isInteger(index) && index >= 0);
+  });
+}
+
 export function parseGroundingEvidence(value: unknown): GroundingEvidence | null {
   if (!isObject(value)) return null;
   const candidates = Reflect.get(value, "candidates");
@@ -114,6 +160,7 @@ export function parseGroundingEvidence(value: unknown): GroundingEvidence | null
   return {
     sources,
     ...(html === null || html.length > 20_000 ? {} : { searchSuggestionHtml: html }),
+    ...(hasLinkedSupport(metadata) ? { hasLinkedSupport: true } : {}),
   };
 }
 

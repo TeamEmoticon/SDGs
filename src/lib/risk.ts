@@ -101,7 +101,7 @@ export function calculateRisk(
   const ruleScore = signals.reduce((sum, s) => sum + s.weight, 0);
 
   // AI 보조 신호는 총합 최대 10점까지만 더한다.
-  const aiScore = analysis.used ? Math.min(analysis.riskPhrases.length * 4, AI_SIGNAL_SCORE_CAP) : 0;
+  const aiScore = analysis.used && analysis.factCheck === undefined ? Math.min(analysis.riskPhrases.length * 4, AI_SIGNAL_SCORE_CAP) : 0;
   const rawScore = Math.min(ruleScore + aiScore, 100);
 
   const hasCritical = signals.some((s) => s.severity === "critical");

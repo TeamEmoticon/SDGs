@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { AnalysisResult, RiskLevel, SensitiveKind } from "@/lib/types";
+import FactCheckResultView from "@/components/FactCheckResultView";
 import {
   CATEGORY_META,
   RISK_UI,
@@ -109,6 +110,8 @@ export default function ResultView({ result, onReset }: Props) {
           </p>
         </section>
       </div>
+
+      {result.ai.factCheck && <FactCheckResultView factCheck={result.ai.factCheck} />}
 
       <details className="detail-disclosure mt-7 pt-5" open={shouldOpenDetails}>
         <summary>찾아낸 위험 신호 {result.signals.length}개</summary>
