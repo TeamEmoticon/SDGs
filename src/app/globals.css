@@ -1,8 +1,43 @@
 @import "tailwindcss";
 
 :root {
-  --brand: #0d9488;
-  --brand-dark: #0f766e;
+  --page: #fffdf7;
+  --surface: #ffffff;
+  --surface-muted: #f4f1e8;
+  --ink: #172017;
+  --ink-muted: #465046;
+  --line: #b7c0b2;
+  --line-strong: #5c685c;
+  --action: #006b63;
+  --action-strong: #004e48;
+  --action-text: #ffffff;
+  --focus: #d46a00;
+  --warning: #9a5800;
+  --danger: #b54708;
+  --critical: #a61b1b;
+  --safe: #166534;
+  --risk-panel: #fff7e8;
+  --control-shadow: 0 3px 0 rgba(23, 32, 23, 0.22);
+}
+
+html[data-contrast="high"] {
+  --page: #ffffff;
+  --surface: #ffffff;
+  --surface-muted: #ffffff;
+  --ink: #000000;
+  --ink-muted: #111111;
+  --line: #000000;
+  --line-strong: #000000;
+  --action: #000000;
+  --action-strong: #000000;
+  --action-text: #ffffff;
+  --focus: #d46a00;
+  --warning: #7a3e00;
+  --danger: #9d1700;
+  --critical: #8f0000;
+  --safe: #123d1f;
+  --risk-panel: #ffffff;
+  --control-shadow: 0 3px 0 #000000;
 }
 
 html {
@@ -13,11 +48,11 @@ html {
 }
 
 body {
-  background-image:
-    radial-gradient(60rem 60rem at 110% -10%, rgba(13, 148, 136, 0.08), transparent 60%),
-    radial-gradient(50rem 50rem at -10% 0%, rgba(14, 165, 233, 0.08), transparent 55%),
-    linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-  background-attachment: fixed;
+  min-width: 320px;
+  background: var(--page);
+  color: var(--ink);
+  font-size: 1rem;
+  line-height: 1.65;
 }
 
 /* Generous tap targets and clear focus for accessibility / older users */
@@ -29,9 +64,69 @@ textarea,
   outline-offset: 2px;
 }
 *:focus-visible {
-  outline: 3px solid #0d9488;
-  outline-offset: 2px;
-  border-radius: 6px;
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.app-shell { background: var(--page); color: var(--ink); }
+.app-header { border-color: var(--line); background: var(--surface); }
+.app-main { max-width: 64rem; }
+.brand-mark { background: var(--action); color: var(--action-text); box-shadow: var(--control-shadow); }
+.ink { color: var(--ink); }
+.ink-muted { color: var(--ink-muted); }
+.surface-panel { border: 2px solid var(--line); background: var(--surface); }
+.surface-muted { background: var(--surface-muted); }
+.section-divider { border-color: var(--line); }
+.control-button, .button-primary, .button-secondary, .mode-tab, .history-action, .contrast-control, .font-control {
+  min-height: 3rem;
+  font-weight: 800;
+  transition: transform 160ms ease, background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+.control-button:active, .button-primary:active, .button-secondary:active, .mode-tab:active, .history-action:active, .contrast-control:active, .font-control:active { transform: translateY(2px); box-shadow: none; }
+.button-primary { min-height: 3.25rem; background: var(--action); color: var(--action-text); border: 2px solid var(--action-strong); box-shadow: var(--control-shadow); }
+.button-primary:hover { background: var(--action-strong); }
+.button-secondary, .control-button, .history-action, .font-control, .contrast-control { background: var(--surface); color: var(--ink); border: 2px solid var(--line-strong); box-shadow: var(--control-shadow); }
+.button-secondary:hover, .control-button:hover, .history-action:hover, .font-control:hover, .contrast-control:hover { background: var(--surface-muted); }
+.mode-tabs { background: var(--surface-muted); border: 2px solid var(--line); }
+.mode-tab { color: var(--ink-muted); border: 2px solid transparent; }
+.mode-tab[data-active="true"] { background: var(--surface); color: var(--ink); border-color: var(--line-strong); box-shadow: var(--control-shadow); }
+.field-label { color: var(--ink); font-size: 1rem; font-weight: 800; }
+.field-control { border: 2px solid var(--line); background: var(--surface); color: var(--ink); font-size: 1rem; line-height: 1.7; }
+.field-control::placeholder { color: var(--ink-muted); opacity: 0.7; }
+.field-control:focus { border-color: var(--action); }
+.support-copy { color: var(--ink-muted); font-size: 0.875rem; font-weight: 600; }
+.hero-eyebrow { color: var(--action); font-size: 1rem; font-weight: 800; letter-spacing: 0.02em; }
+.hero-heading { color: var(--ink); font-size: clamp(2.125rem, 7vw, 3rem); font-weight: 900; line-height: 1.25; letter-spacing: -0.04em; }
+.hero-accent { color: var(--action); }
+.hero-copy { color: var(--ink-muted); font-size: 1.125rem; font-weight: 650; line-height: 1.7; }
+.trust-guidance { border-top: 2px solid var(--line); border-bottom: 2px solid var(--line); color: var(--ink-muted); }
+.trust-guidance strong { color: var(--ink); }
+@media (min-width: 640px) { .trust-guidance li + li { border-left: 2px solid var(--line); } }
+.notice-warning { border: 2px solid var(--warning); background: var(--risk-panel); color: var(--ink); }
+.risk-panel { border: 3px solid var(--line-strong); background: var(--risk-panel); }
+.risk-safe { --risk-color: var(--safe); }
+.risk-caution { --risk-color: var(--warning); }
+.risk-danger { --risk-color: var(--danger); }
+.risk-critical { --risk-color: var(--critical); }
+.risk-panel, .risk-badge { border-color: var(--risk-color); }
+.risk-text { color: var(--risk-color); }
+.risk-badge { border: 2px solid var(--risk-color); color: var(--risk-color); background: var(--surface); font-weight: 900; }
+.risk-meter { background: var(--surface-muted); border: 2px solid var(--line-strong); }
+.risk-meter > span { background: var(--risk-color); }
+.detail-disclosure { border-top: 2px solid var(--line); color: var(--ink); }
+.detail-disclosure summary { cursor: pointer; font-size: 1.125rem; font-weight: 900; }
+.detail-disclosure summary::marker { color: var(--action); }
+.history-list > li + li { border-top: 2px solid var(--line); }
+.modal-backdrop { background: rgba(0, 0, 0, 0.6); }
+.modal-surface { background: var(--surface); border: 3px solid var(--line-strong); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 1ms !important; }
+}
+
+@media (forced-colors: active) {
+  .button-primary, .button-secondary, .control-button, .history-action, .font-control, .contrast-control, .mode-tab[data-active="true"] { forced-color-adjust: auto; border: 2px solid ButtonText; }
 }
 
 /* Controlled textarea height; users can still drag to resize. */

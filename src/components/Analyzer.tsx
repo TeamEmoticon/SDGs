@@ -14,11 +14,12 @@ import RecentHistory from "./RecentHistory";
 
 type Screen = "input" | "analyzing" | "result";
 export type FontScale = "normal" | "large" | "xl";
+type ContrastMode = "normal" | "high";
 
 const FONT_PX: Record<FontScale, string> = {
-  normal: "16px",
-  large: "18.5px",
-  xl: "21px",
+  normal: "18px",
+  large: "20px",
+  xl: "22px",
 };
 const FONT_LABEL: Record<FontScale, string> = {
   normal: "보통",
@@ -33,6 +34,10 @@ const FONT_NEXT: Record<FontScale, FontScale> = {
 
 function isFontScale(value: string | null): value is FontScale {
   return value === "normal" || value === "large" || value === "xl";
+}
+
+function isContrastMode(value: string | null): value is ContrastMode {
+  return value === "normal" || value === "high";
 }
 
 function readApiMessage(value: unknown, key: string): string | null {
@@ -69,6 +74,15 @@ export default function Analyzer() {
       return "normal";
     }
   });
+  const [contrastMode, setContrastMode] = useState<ContrastMode>(() => {
+    if (typeof window === "undefined") return "normal";
+    try {
+      const saved = localStorage.getItem("ansim-contrast");
+      return isContrastMode(saved) ? saved : "normal";
+    } catch {
+      return "normal";
+    }
+  });
   const [examplesOpen, setExamplesOpen] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const topRef = useRef<HTMLDivElement>(null);
@@ -81,6 +95,15 @@ export default function Analyzer() {
       return;
     }
   }, [fontScale]);
+
+  useEffect(() => {
+    document.documentElement.dataset.contrast = contrastMode;
+    try {
+      localStorage.setItem("ansim-contrast", contrastMode);
+    } catch {
+      return;
+    }
+  }, [contrastMode]);
 
   // Drive the pipeline animation while analyzing.
   useEffect(() => {
@@ -165,48 +188,56 @@ export default function Analyzer() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="app-shell flex min-h-[100dvh] flex-col">
       <div ref={topRef} />
 
       {/* ---------------- Top bar ---------------- */}
-      <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/85 backdrop-blur">
+      <header className="app-header sticky top-0 z-30 border-b-2">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <button
             onClick={handleReset}
             className="flex items-center gap-2.5 text-left"
             aria-label="처음으로"
           >
-            <span className="grid h-10 w-10 place-items-center rounded-2xl bg-teal-600 text-lg font-extrabold text-white shadow-sm shadow-teal-600/30">
+            <span className="brand-mark grid h-10 w-10 place-items-center rounded-xl text-lg font-extrabold">
               안
             </span>
             <span className="leading-tight">
-              <span className="block text-lg font-extrabold tracking-tight text-slate-900">
+              <span className="ink block text-lg font-extrabold tracking-tight">
                 안심글
               </span>
-              <span className="block text-[0.7rem] font-semibold text-teal-700">
+              <span className="block text-[0.7rem] font-semibold text-[var(--action)]">
                 SDGs 디지털 안전 도우미
               </span>
             </span>
           </button>
 
-          <div className="flex items-center gap-2">
-            <span className="hidden rounded-full bg-teal-50 px-3 py-1.5 text-xs font-bold text-teal-700 ring-1 ring-teal-200 sm:inline">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <span className="hidden border-2 border-[var(--line)] px-3 py-1.5 text-xs font-bold text-[var(--ink-muted)] sm:inline">
               SDG 16 · 10 · 9
             </span>
             <button
               onClick={() => setFontScale((f) => FONT_NEXT[f])}
-              className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 shadow-sm transition hover:border-teal-300 hover:bg-teal-50"
+              className="font-control rounded-xl px-3 py-2 text-sm"
               aria-label={`글자 크기: ${FONT_LABEL[fontScale]}`}
               title="글자 크기 바꾸기"
             >
               글자 {FONT_LABEL[fontScale]}
+            </button>
+            <button
+              type="button"
+              onClick={() => setContrastMode((mode) => (mode === "normal" ? "high" : "normal"))}
+              className="contrast-control rounded-xl px-3 py-2 text-sm"
+              aria-pressed={contrastMode === "high"}
+            >
+              {contrastMode === "high" ? "일반 화면으로" : "고대비 켜기"}
             </button>
           </div>
         </div>
       </header>
 
       {/* ---------------- Main ---------------- */}
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 sm:py-10">
+      <main className="app-main mx-auto w-full flex-1 px-4 py-8 sm:px-6 sm:py-12">
         {screen === "input" && (
           <>
             <InputView
@@ -226,15 +257,15 @@ export default function Analyzer() {
         )}
 
         {screen === "analyzing" && (
-          <section className="mx-auto max-w-xl py-10 text-center">
+          <section className="mx-auto max-w-xl py-10 text-center" aria-live="polite">
             <div className="relative mx-auto mb-8 grid h-24 w-24 place-items-center">
-              <span className="pulse-dot absolute inset-0 text-teal-400" />
-              <span className="grid h-20 w-20 place-items-center rounded-full bg-teal-600 text-2xl font-extrabold text-white shadow-lg shadow-teal-600/30">
+              <span className="pulse-dot absolute inset-0 text-[var(--action)]" />
+              <span className="brand-mark grid h-20 w-20 place-items-center rounded-full text-2xl font-extrabold">
                 안
               </span>
             </div>
-            <h2 className="text-2xl font-extrabold text-slate-900">글을 확인하고 있어요</h2>
-            <p className="mt-2 text-slate-600">잠시만 기다려 주세요. 금방 끝나요.</p>
+            <h2 className="ink text-2xl font-extrabold">글을 확인하고 있어요</h2>
+            <p className="ink-muted mt-2">잠시만 기다려 주세요. 금방 끝나요.</p>
 
             <ol className="mt-8 space-y-3 text-left">
               {PIPELINE.map((step, i) => {
@@ -243,43 +274,43 @@ export default function Analyzer() {
                 return (
                   <li
                     key={step.label}
-                    className={`flex items-center gap-3 rounded-2xl border px-4 py-3 transition-all duration-500 ${
+                    className={`surface-panel flex items-center gap-3 rounded-xl px-4 py-3 transition-all duration-500 ${
                       done
-                        ? "border-teal-200 bg-teal-50"
+                        ? "bg-[var(--surface-muted)]"
                         : active
-                          ? "border-teal-300 bg-white shadow-sm"
-                          : "border-slate-200 bg-slate-50 opacity-60"
+                          ? "bg-[var(--surface)]"
+                          : "opacity-60"
                     }`}
                   >
                     <span
                       className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-bold ${
-                        done ? "bg-teal-600 text-white" : "bg-white text-slate-500 ring-1 ring-slate-200"
+                        done ? "bg-[var(--action)] text-white" : "surface-muted ink-muted border-2 border-[var(--line)]"
                       }`}
                     >
                       {i + 1}
                     </span>
                     <span className="min-w-0">
                       <span className="flex flex-wrap items-center gap-2">
-                        <span className="font-bold text-slate-800">{step.label}</span>
+                        <span className="ink font-bold">{step.label}</span>
                         {done && (
-                          <span className="rounded-full bg-teal-600 px-2 py-0.5 text-xs font-bold text-white">
+                          <span className="rounded-full bg-[var(--action)] px-2 py-0.5 text-xs font-bold text-white">
                             완료
                           </span>
                         )}
                       </span>
-                      <span className="block text-sm text-slate-500">{step.sub}</span>
+                      <span className="ink-muted block text-sm">{step.sub}</span>
                     </span>
                     {active && (
-                      <span className="ml-auto h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-teal-300 border-t-transparent" />
+                      <span className="ml-auto h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-[var(--action)] border-t-transparent" />
                     )}
                   </li>
                 );
               })}
             </ol>
 
-            <div className="relative mt-6 h-2 w-full overflow-hidden rounded-full bg-slate-200">
+            <div className="surface-muted relative mt-6 h-2 w-full overflow-hidden rounded-full">
               <span
-                className="absolute top-0 h-full w-1/3 rounded-full bg-teal-500"
+                className="absolute top-0 h-full w-1/3 rounded-full bg-[var(--action)]"
                 style={{ animation: "indeterminate 1.3s ease-in-out infinite" }}
               />
             </div>
@@ -292,17 +323,17 @@ export default function Analyzer() {
       </main>
 
       {/* ---------------- Footer ---------------- */}
-      <footer className="border-t border-slate-200 bg-white/60">
-        <div className="mx-auto w-full max-w-5xl px-4 py-8 text-sm text-slate-500 sm:px-6">
-          <p className="font-bold text-slate-700">안심글 — 누구나 안전하게 디지털을 쓰는 세상</p>
+      <footer className="section-divider border-t-2">
+        <div className="ink-muted mx-auto w-full max-w-5xl px-4 py-8 text-sm sm:px-6">
+          <p className="ink font-bold">안심글 — 누구나 안전하게 디지털을 쓰는 세상</p>
           <p className="mt-2 leading-relaxed">
             이 도구는 유엔 지속가능발전목표(SDGs)의{" "}
-            <span className="font-semibold text-slate-600">
+            <span className="font-semibold text-[var(--ink-muted)]">
               16 평화·정의·강력한 기관, 10 불평등 감소, 9 인프라와 혁신
             </span>{" "}
             실천을 목표로 만들었습니다. 분석 결과는 참고용이며, 의심되는 즉시{" "}
-            <span className="font-semibold text-teal-700">112(경찰)</span> ·{" "}
-            <span className="font-semibold text-teal-700">1332(금융사기 상담)</span>로 확인하세요.
+            <span className="font-semibold text-[var(--action)]">112(경찰)</span> ·{" "}
+            <span className="font-semibold text-[var(--action)]">1332(금융사기 상담)</span>로 확인하세요.
           </p>
         </div>
       </footer>

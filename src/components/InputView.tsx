@@ -1,17 +1,14 @@
-// InputView.tsx
-// 첫 화면: 문자/URL 입력 탭, 입력창, 예시 연습 진입점을 보여주는 컴포넌트
-// (사용 방법 안내는 보류 상태 — 복원 시 git 히스토리의 HelpModal.tsx 참조)
 "use client";
 
 import type { InputType } from "@/lib/types";
 
 interface Props {
   mode: InputType;
-  setMode: (m: InputType) => void;
+  setMode: (mode: InputType) => void;
   text: string;
-  setText: (t: string) => void;
+  setText: (text: string) => void;
   url: string;
-  setUrl: (u: string) => void;
+  setUrl: (url: string) => void;
   onAnalyze: () => void;
   error: string | null;
   urlNote: string | null;
@@ -34,94 +31,80 @@ export default function InputView({
 
   return (
     <div className="animate-fade">
-      {/* Hero */}
       <section className="text-center">
-        <span className="inline-flex items-center gap-2 rounded-full bg-teal-100 px-4 py-1.5 text-sm font-bold text-teal-700">
-          문자·인터넷 글 사기 예방
-        </span>
-        <h1 className="mx-auto mt-5 max-w-2xl text-balance text-4xl font-extrabold leading-tight tracking-tight text-slate-900 sm:text-5xl">
-          받은 문자나 인터넷 글이{" "}
-          <span className="bg-gradient-to-r from-teal-600 to-sky-600 bg-clip-text text-transparent">
-            걱정되시나요?
-          </span>
+        <p className="hero-eyebrow">문자·인터넷 글 사기 예방</p>
+        <h1 className="hero-heading mx-auto mt-4 max-w-2xl text-balance">
+          받은 문자나 인터넷 글이 <span className="hero-accent">걱정되시나요?</span>
         </h1>
-        <p className="mx-auto mt-4 max-w-xl text-balance text-lg text-slate-600">
+        <p className="hero-copy mx-auto mt-5 max-w-xl text-balance">
           글을 붙여넣거나 주소만 적어주세요. <br className="hidden sm:block" />
           위험한 글인지 쉬운 말로 알려드릴게요.
         </p>
       </section>
 
-      {/* Input card */}
-      <section className="mx-auto mt-8 max-w-2xl rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_18px_50px_rgba(16,24,40,0.07)] sm:p-6">
-        {/* Mode tabs */}
-        <div className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-100 p-1.5">
+      <section className="surface-panel mx-auto mt-8 max-w-2xl rounded-2xl p-4 sm:p-6">
+        <div className="mode-tabs grid grid-cols-2 gap-2 rounded-xl p-1.5">
           <button
+            type="button"
             onClick={() => setMode("text")}
-            className={`flex min-h-12 items-center justify-center gap-2 rounded-xl px-3 py-3 text-center text-base font-bold leading-tight transition ${
-              mode === "text"
-                ? "bg-white text-teal-700 shadow-sm"
-                : "text-slate-500 hover:text-slate-700"
-            }`}
+            className="mode-tab rounded-lg px-3 py-3 text-center text-base leading-tight"
+            data-active={mode === "text"}
           >
             문자·글 붙여넣기
           </button>
           <button
+            type="button"
             onClick={() => setMode("url")}
-            className={`flex min-h-12 items-center justify-center gap-2 rounded-xl px-3 py-3 text-center text-base font-bold leading-tight transition ${
-              mode === "url"
-                ? "bg-white text-teal-700 shadow-sm"
-                : "text-slate-500 hover:text-slate-700"
-            }`}
+            className="mode-tab rounded-lg px-3 py-3 text-center text-base leading-tight"
+            data-active={mode === "url"}
           >
             인터넷 주소 넣기
           </button>
         </div>
 
-        {/* URL fetch notice */}
         {urlNote && mode === "text" && (
-          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-800 animate-fade">
-            <p className="text-sm font-bold">안내</p>
-            <p className="mt-1 text-sm font-medium leading-relaxed">{urlNote}</p>
+          <div className="notice-warning mt-4 rounded-xl p-4 animate-fade" role="status">
+            <p className="font-bold">주소를 읽지 못했어요</p>
+            <p className="mt-1 font-semibold leading-relaxed">{urlNote}</p>
           </div>
         )}
 
-        {/* Inputs */}
-        <div className="mt-4">
+        <div className="mt-5">
           {mode === "text" ? (
             <>
-              <label htmlFor="text" className="mb-2 block text-sm font-bold text-slate-700">
+              <label htmlFor="text" className="field-label mb-2 block">
                 확인할 문자나 글을 붙여넣어 주세요
               </label>
               <textarea
                 id="text"
                 value={text}
-                onChange={(e) => setText(e.target.value)}
+                onChange={(event) => setText(event.target.value)}
                 placeholder={`예)\n[Web발신]\n고객님, 계좌가 정지되었습니다. 확인을 위해 아래 링크를 눌러주세요.\nhttp://...`}
                 rows={8}
-                className="modal-scroll w-full resize-y rounded-2xl border-2 border-slate-200 bg-slate-50 p-4 text-lg leading-relaxed text-slate-800 transition placeholder:text-slate-400 focus:border-teal-500 focus:bg-white"
+                className="field-control modal-scroll w-full resize-y rounded-xl p-4 transition"
               />
-              <div className="mt-1.5 flex items-center justify-between px-1 text-xs text-slate-400">
+              <div className="support-copy mt-2 flex items-center justify-between gap-3 px-1">
                 <span>전화번호·계좌번호·인증번호는 자동으로 가려져요.</span>
                 <span>{text.length.toLocaleString()}자</span>
               </div>
             </>
           ) : (
             <>
-              <label htmlFor="url" className="mb-2 block text-sm font-bold text-slate-700">
+              <label htmlFor="url" className="field-label mb-2 block">
                 뉴스·블로그·공공기관 페이지 주소를 넣어주세요
               </label>
-              <div className="flex items-center gap-2 rounded-2xl border-2 border-slate-200 bg-slate-50 px-4 transition focus-within:border-teal-500 focus-within:bg-white">
+              <div className="field-control flex items-center gap-2 rounded-xl px-4 transition focus-within:border-[var(--action)]">
                 <input
                   id="url"
                   type="url"
                   inputMode="url"
                   value={url}
-                  onChange={(e) => setUrl(e.target.value)}
+                  onChange={(event) => setUrl(event.target.value)}
                   placeholder="https://example.com/article"
-                  className="w-full bg-transparent py-4 text-lg text-slate-800 outline-none placeholder:text-slate-400"
+                  className="w-full bg-transparent py-4 outline-none"
                 />
               </div>
-              <p className="mt-1.5 px-1 text-xs text-slate-400">
+              <p className="support-copy mt-2 px-1">
                 글을 읽어올 수 없는 페이지면, 글을 복사해 직접 붙여넣어 주세요.
               </p>
             </>
@@ -129,46 +112,47 @@ export default function InputView({
         </div>
 
         {error && (
-          <p className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+          <p className="notice-warning mt-4 rounded-xl px-4 py-3 font-semibold" role="alert">
             {error}
           </p>
         )}
 
-        {/* Submit */}
         <button
+          type="button"
           onClick={onAnalyze}
           disabled={!canSubmit}
-          className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-600 px-6 py-4 text-lg font-extrabold text-white shadow-lg shadow-teal-600/25 transition hover:bg-teal-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+          className="button-primary mt-6 flex w-full items-center justify-center rounded-xl px-6 py-4 text-lg disabled:cursor-not-allowed disabled:border-[var(--line)] disabled:bg-[var(--line)] disabled:shadow-none"
         >
           이 글 확인하기
         </button>
       </section>
 
-      {/* Secondary actions */}
-      <section className="mx-auto mt-6 max-w-2xl">
+      <section className="mx-auto mt-5 max-w-2xl">
         <button
+          type="button"
           onClick={onExamples}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 bg-white px-5 py-4 text-base font-bold text-slate-700 transition hover:border-teal-300 hover:bg-teal-50"
+          className="button-secondary flex w-full items-center justify-center rounded-xl px-5 py-4 text-base"
         >
           예시로 연습하기
         </button>
       </section>
 
-      {/* Trust row */}
-      <section className="mx-auto mt-8 grid max-w-2xl gap-3 sm:grid-cols-3">
-        {[
-          { title: "개인정보 보호", desc: "민감한 번호는 가려서 검사해요" },
-          { title: "빠른 확인", desc: "규칙과 AI로 위험을 찾아요" },
-          { title: "쉬운 말", desc: "어려운 말 없이 알려드려요" },
-        ].map((f) => (
-          <div
-            key={f.title}
-            className="rounded-2xl border border-slate-200 bg-white/70 p-4 text-center"
-          >
-            <div className="text-sm font-bold text-slate-800">{f.title}</div>
-            <div className="text-xs text-slate-500">{f.desc}</div>
-          </div>
-        ))}
+      <section className="trust-guidance mx-auto mt-8 max-w-2xl py-5" aria-label="안심글 사용 안내">
+        <ul className="grid gap-4 sm:grid-cols-3 sm:gap-0">
+          {[
+            { title: "개인정보 보호", desc: "민감한 번호는 가려서 검사해요" },
+            { title: "빠른 확인", desc: "위험 신호를 차례로 확인해요" },
+            { title: "쉬운 말", desc: "어려운 말 없이 알려드려요" },
+          ].map((feature) => (
+            <li
+              key={feature.title}
+              className="text-center sm:px-4"
+            >
+              <strong className="block text-base">{feature.title}</strong>
+              <span className="mt-1 block text-sm font-semibold">{feature.desc}</span>
+            </li>
+          ))}
+        </ul>
       </section>
     </div>
   );

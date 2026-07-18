@@ -1,6 +1,3 @@
-// ResultView.tsx
-// 분석 결과 화면: 위험 단계 배너, 요약, 위험 신호 목록, 걸러낸 개인정보를 보여준다
-// (전화 걸기 버튼과 사용 방법 안내는 보류 상태 — 복원 시 git 히스토리 참조)
 "use client";
 
 import { useState } from "react";
@@ -25,244 +22,180 @@ const LEVEL_STORY: Record<RiskLevel, string> = {
   critical: "여러 위험 신호가 확인되어 특히 조심해야 합니다.",
 };
 
-function Card({
-  title,
-  children,
-  tone = "default",
-}: {
-  title: string;
-  children: React.ReactNode;
-  tone?: "default" | "muted";
-}) {
-  return (
-    <section
-      className={`rounded-3xl border p-5 sm:p-6 ${
-        tone === "muted"
-          ? "border-slate-200 bg-slate-50/70"
-          : "border-slate-200 bg-white"
-      } animate-fade-up`}
-    >
-      <h3 className="mb-3 text-lg font-extrabold text-slate-900">{title}</h3>
-      {children}
-    </section>
-  );
-}
-
 export default function ResultView({ result, onReset }: Props) {
   const ui = RISK_UI[result.riskLevel];
   const [showText, setShowText] = useState(false);
   const score = Math.round(result.riskScore);
-
+  const shouldOpenDetails = result.riskLevel === "danger" || result.riskLevel === "critical";
   const sensitiveKinds = (Object.keys(result.mask.counts) as SensitiveKind[]).filter(
-    (k) => result.mask.counts[k] > 0,
+    (kind) => result.mask.counts[kind] > 0,
   );
 
   return (
-    <div className="animate-fade">
-      {/* ---- Risk verdict banner ---- */}
-      <section
-        className={`overflow-hidden rounded-3xl border-2 ${ui.banner} animate-pop`}
-      >
-        <div className="p-5 sm:p-7">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <span className={`rounded-full px-3 py-1 text-sm font-bold ${ui.chip}`}>
-              분석 완료 · {result.inputType === "url" ? "인터넷 주소" : "문자·글"}
-            </span>
-            <span className="text-sm font-semibold text-slate-500">
-              {new Date(result.createdAt).toLocaleString("ko-KR", {
-                month: "long",
-                day: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-              })}
+    <div className="animate-fade mx-auto max-w-2xl">
+      <section className={`risk-panel ${ui.tone} overflow-hidden rounded-2xl p-5 sm:p-7`}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <span className={`risk-badge rounded-full px-3 py-1 text-sm ${ui.tone}`}>
+            확인 완료 · {result.inputType === "url" ? "인터넷 주소" : "문자·글"}
+          </span>
+          <span className="support-copy">
+            {new Date(result.createdAt).toLocaleString("ko-KR", {
+              month: "long",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+            })}
+          </span>
+        </div>
+
+        <div className="mt-5">
+          <p className="ink-muted text-base font-extrabold">이 글의 위험 단계</p>
+          <p className={`risk-text mt-1 text-4xl font-black leading-tight sm:text-5xl`}>{ui.label}</p>
+          <p className="ink mt-4 text-lg font-bold">{LEVEL_STORY[result.riskLevel]}</p>
+        </div>
+
+        <div className="mt-6">
+          <div className="ink mb-2 flex items-center justify-between text-base font-extrabold">
+            <span>위험 점수</span>
+            <span className="risk-text">
+              {score} <span className="ink-muted">/ 100</span>
             </span>
           </div>
-
-          <div className="mt-4">
-            <p className="text-sm font-bold text-slate-500">이 글의 위험 단계</p>
-            <p className={`text-3xl font-extrabold leading-tight sm:text-4xl ${ui.bannerText}`}>
-              {ui.label}
-            </p>
+          <div className="risk-meter relative h-4 w-full overflow-hidden rounded-full">
+            <span
+              className="absolute inset-y-0 left-0 rounded-full transition-[width]"
+              style={{ width: `${Math.max(score, 4)}%` }}
+            />
           </div>
-
-          <p className={`mt-3 text-lg font-semibold ${ui.bannerText}`}>
-            {LEVEL_STORY[result.riskLevel]}
-          </p>
-
-          {/* Score meter */}
-          <div className="mt-5">
-            <div className="mb-1.5 flex items-center justify-between text-sm font-bold">
-              <span className="text-slate-600">위험 점수</span>
-              <span className={ui.scoreText}>
-                {score}
-                <span className="text-slate-400"> / 100</span>
-              </span>
-            </div>
-            <div className="relative h-4 w-full overflow-hidden rounded-full bg-slate-200">
-              <div className="flex h-full w-full">
-                <div className="h-full flex-[18] bg-emerald-300/50" />
-                <div className="h-full flex-[27] bg-amber-300/50" />
-                <div className="h-full flex-[27] bg-orange-300/50" />
-                <div className="h-full flex-[28] bg-red-300/50" />
-              </div>
-              <div
-                className={`absolute top-0 h-full rounded-full ${ui.bar} transition-all`}
-                style={{ width: `${Math.max(score, 4)}%` }}
-              />
-            </div>
-            <div className="mt-1.5 flex justify-between text-[0.65rem] font-semibold text-slate-400">
-              <span>안전</span>
-              <span>주의</span>
-              <span>위험</span>
-              <span>고위험</span>
-            </div>
+          <div className="ink-muted mt-2 flex justify-between text-xs font-bold">
+            <span>안전</span>
+            <span>주의</span>
+            <span>위험</span>
+            <span>고위험</span>
           </div>
         </div>
       </section>
 
-      {/* ---- Recommendation ---- */}
-      <section
-        className={`mt-4 rounded-3xl border-2 p-5 sm:p-6 animate-fade-up animate-delay-1 ${ui.banner}`}
-      >
-        <h3 className={`text-lg font-extrabold ${ui.bannerText}`}>어떻게 하면 좋을까요?</h3>
-        <p className={`mt-2 text-lg leading-relaxed ${ui.bannerText}`}>{result.recommendation}</p>
+      <section className="section-divider mt-7 border-t-2 pt-6">
+        <h2 className="ink text-xl font-black">지금 할 일</h2>
+        <p className="ink mt-3 text-lg font-bold leading-relaxed">{result.recommendation}</p>
       </section>
 
-      {/* ---- Two-column detail cards ---- */}
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        {/* Easy summary */}
-        <Card title="쉬운 말 요약">
-          <p className="text-lg leading-relaxed text-slate-700">
+      <div className="section-divider mt-7 grid gap-6 border-t-2 pt-6 sm:grid-cols-2 sm:gap-0">
+        <section className="sm:pr-6">
+          <h2 className="ink text-xl font-black">쉬운 말 요약</h2>
+          <p className="ink mt-3 text-lg font-semibold leading-relaxed">
             {result.ai.summary || "내용을 요약하지 못했습니다."}
           </p>
-          {result.ai.used ? (
-            <p className="mt-3 text-xs font-semibold text-teal-600">AI가 쉬운 말로 정리했어요</p>
-          ) : (
-            <p className="mt-3 text-xs font-semibold text-slate-400">
-              규칙 검사 결과로 알려드려요 (AI 요약 미사용)
-            </p>
-          )}
-        </Card>
-
-        {/* Info type */}
-        <Card title="이 글은 어떤 종류?">
-          <div className="flex items-center gap-3">
-            <span className="rounded-2xl bg-teal-50 px-4 py-2 text-lg font-extrabold text-teal-700 ring-1 ring-teal-200">
-              {result.ai.infoType || "분류 없음"}
-            </span>
-          </div>
-          <p className="mt-3 text-sm text-slate-500">
-            글의 목적을 분류한 결과예요. &lsquo;사기·피싱 의심&rsquo;이면 각별히 조심하세요.
+          <p className="support-copy mt-3">
+            {result.ai.used ? "내용을 알아보기 쉽게 정리했습니다." : "규칙 검사 결과를 바탕으로 정리했습니다."}
           </p>
-        </Card>
+        </section>
+        <section className="section-divider border-t-2 pt-6 sm:border-t-0 sm:border-l-2 sm:pl-6 sm:pt-0">
+          <h2 className="ink text-xl font-black">이 글은 어떤 종류인가요?</h2>
+          <p className="ink mt-3 text-lg font-bold">{result.ai.infoType || "분류 없음"}</p>
+          <p className="support-copy mt-3">
+            글의 목적을 분류한 결과입니다. 사기·피싱 의심이면 각별히 조심하세요.
+          </p>
+        </section>
       </div>
 
-      {/* ---- Signals ---- */}
-      <Card title={`찾아낸 위험 신호 ${result.signals.length}개`}>
-        {result.signals.length === 0 ? (
-          <div className="rounded-2xl bg-emerald-50 p-4 text-emerald-700">
-            <p className="font-semibold">규칙 검사에서 위험 신호가 발견되지 않았어요.</p>
-          </div>
-        ) : (
-          <ul className="space-y-3">
-            {result.signals.map((s) => {
-              const cat = CATEGORY_META[s.category] ?? { label: s.category };
-              return (
-                <li
-                  key={s.id}
-                  className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4"
-                >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-bold text-slate-800">{s.label}</span>
-                    <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
-                      {cat.label}
-                    </span>
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ${SEVERITY_STYLE[s.severity]}`}
-                    >
-                      {SEVERITY_LABEL[s.severity]}
-                    </span>
-                  </div>
-                  {s.matched && (
-                    <p className="mt-2 rounded-lg bg-white px-3 py-2 text-sm text-slate-600 ring-1 ring-slate-100">
-                      &ldquo;{s.matched}&rdquo;
-                    </p>
-                  )}
-                  <p className="mt-2 text-sm leading-relaxed text-slate-600">{s.detail}</p>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </Card>
+      <details className="detail-disclosure mt-7 pt-5" open={shouldOpenDetails}>
+        <summary>찾아낸 위험 신호 {result.signals.length}개</summary>
+        <div className="mt-4">
+          {result.signals.length === 0 ? (
+            <p className="surface-muted ink rounded-xl p-4 font-semibold">
+              규칙 검사에서 위험 신호가 발견되지 않았어요.
+            </p>
+          ) : (
+            <ul className="space-y-4">
+              {result.signals.map((signal) => {
+                const category = CATEGORY_META[signal.category] ?? { label: signal.category };
+                return (
+                  <li key={signal.id} className="section-divider border-b-2 pb-4 last:border-b-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="ink font-extrabold">{signal.label}</span>
+                      <span className="surface-muted ink-muted rounded-full px-2.5 py-1 text-sm font-bold">
+                        {category.label}
+                      </span>
+                      <span className={`risk-badge ${SEVERITY_STYLE[signal.severity]} rounded-full px-2.5 py-1 text-sm`}>
+                        {SEVERITY_LABEL[signal.severity]}
+                      </span>
+                    </div>
+                    {signal.matched && (
+                      <p className="surface-muted ink mt-3 rounded-lg px-3 py-2 font-semibold">
+                        “{signal.matched}”
+                      </p>
+                    )}
+                    <p className="ink-muted mt-3 font-semibold leading-relaxed">{signal.detail}</p>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </details>
 
-      {/* ---- AI candidate phrases ---- */}
       {result.ai.riskPhrases.length > 0 && (
-        <Card title="AI가 뽑은 의심 구절" tone="muted">
-          <ul className="space-y-2">
-            {result.ai.riskPhrases.map((p, i) => (
-              <li
-                key={i}
-                className="flex items-start gap-2 rounded-xl bg-white px-3 py-2 text-slate-700 ring-1 ring-slate-100"
-              >
-                <span className="mt-0.5 text-amber-500" aria-hidden>
-                  -
-                </span>
-                <span>{p}</span>
+        <details className="detail-disclosure mt-5 pt-5">
+          <summary>주의할 문장</summary>
+          <ul className="mt-4 space-y-2">
+            {result.ai.riskPhrases.map((phrase, index) => (
+              <li key={`${phrase}-${index}`} className="surface-muted ink rounded-lg px-3 py-2 font-semibold">
+                {phrase}
               </li>
             ))}
           </ul>
-        </Card>
+        </details>
       )}
 
-      {/* ---- Masked personal info ---- */}
-      <Card title="걸러낸 개인정보">
-        {result.mask.maskedCount === 0 ? (
-          <p className="text-slate-500">전화번호·계좌번호·인증번호가 감지되지 않았어요.</p>
-        ) : (
-          <>
-            <div className="flex flex-wrap gap-2.5">
-              {sensitiveKinds.map((k) => (
-                <span
-                  key={k}
-                  className="rounded-2xl bg-slate-100 px-3.5 py-2 text-sm font-bold text-slate-700"
-                >
-                  {SENSITIVE_LABEL[k]} {result.mask.counts[k]}개
-                </span>
-              ))}
-            </div>
-            <button
-              onClick={() => setShowText((v) => !v)}
-              className="mt-4 text-sm font-bold text-teal-700 underline-offset-4 hover:underline"
-            >
-              {showText ? "가려진 글 숨기기" : "개인정보가 가려진 글 보기"}
-            </button>
-            {showText && (result.maskedText ? (
-              <pre className="modal-scroll mt-2 max-h-72 overflow-auto whitespace-pre-wrap rounded-2xl bg-slate-900 p-4 text-sm leading-relaxed text-slate-100 animate-fade">
-                {result.maskedText}
-              </pre>
-            ) : (
-              <p className="mt-2 rounded-xl bg-slate-100 px-3 py-2 text-sm text-slate-600">기록에는 원문을 저장하지 않았습니다.</p>
-            ))}
-          </>
-        )}
-      </Card>
+      <details className="detail-disclosure mt-5 pt-5">
+        <summary>걸러낸 개인정보</summary>
+        <div className="mt-4">
+          {result.mask.maskedCount === 0 ? (
+            <p className="ink-muted font-semibold">전화번호·계좌번호·인증번호가 감지되지 않았어요.</p>
+          ) : (
+            <>
+              <div className="flex flex-wrap gap-2">
+                {sensitiveKinds.map((kind) => (
+                  <span key={kind} className="surface-muted ink rounded-lg px-3 py-2 font-bold">
+                    {SENSITIVE_LABEL[kind]} {result.mask.counts[kind]}개
+                  </span>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowText((visible) => !visible)}
+                className="history-action mt-4 rounded-lg px-3 py-2 text-sm"
+              >
+                {showText ? "가려진 글 숨기기" : "개인정보가 가려진 글 보기"}
+              </button>
+              {showText &&
+                (result.maskedText ? (
+                  <pre className="modal-scroll ink mt-3 max-h-72 overflow-auto whitespace-pre-wrap border-2 border-[var(--line)] bg-[var(--surface)] p-4 text-sm font-semibold leading-relaxed">
+                    {result.maskedText}
+                  </pre>
+                ) : (
+                  <p className="surface-muted ink-muted mt-3 rounded-lg px-3 py-2 font-semibold">
+                    기록에는 원문을 저장하지 않았습니다.
+                  </p>
+                ))}
+            </>
+          )}
+        </div>
+      </details>
 
-      {/* ---- Actions ---- */}
-      <div className="mt-6">
+      <div className="mt-8">
         <button
+          type="button"
           onClick={onReset}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-600 px-6 py-4 text-lg font-extrabold text-white shadow-lg shadow-teal-600/25 transition hover:bg-teal-700"
+          className="button-primary flex w-full items-center justify-center rounded-xl px-6 py-4 text-lg"
         >
           다른 글 확인하기
         </button>
       </div>
 
-      {result.sourceUrl && (
-        <p className="mt-4 break-all text-center text-xs text-slate-400">
-          출처: {result.sourceUrl}
-        </p>
-      )}
+      {result.sourceUrl && <p className="support-copy mt-4 break-all text-center">출처: {result.sourceUrl}</p>}
     </div>
   );
 }

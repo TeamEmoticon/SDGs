@@ -10,21 +10,20 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0d9488",
+  themeColor: "#fffdf7",
   width: "device-width",
   initialScale: 1,
 };
 
-// Apply the saved font scale before paint so large-text users see no flash.
-const FONT_SCRIPT = `(function(){try{var s=localStorage.getItem('ansim-font');if(s){var map={'normal':'16px','large':'18.5px','xl':'21px'};if(map[s]){document.documentElement.style.fontSize=map[s];}}}catch(e){}})();`;
+const PREFERENCE_SCRIPT = `(function(){try{var root=document.documentElement;var scale=localStorage.getItem('ansim-font');var fontMap={'normal':'18px','large':'20px','xl':'22px'};if(scale&&fontMap[scale]){root.style.fontSize=fontMap[scale];}var contrast=localStorage.getItem('ansim-contrast');root.dataset.contrast=contrast==='high'?'high':'normal';}catch(e){}})();`;
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="ko" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: FONT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: PREFERENCE_SCRIPT }} />
       </head>
-      <body className="min-h-screen bg-slate-50 text-slate-900 antialiased">{children}</body>
+      <body className="min-h-[100dvh] antialiased">{children}</body>
     </html>
   );
 }

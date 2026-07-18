@@ -30,21 +30,21 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 p-0 backdrop-blur-sm animate-fade sm:items-center sm:p-4"
+      className="modal-backdrop fixed inset-0 z-50 flex items-end justify-center p-0 animate-fade sm:items-center sm:p-4"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label={title}
     >
       <div
-        className="modal-scroll relative max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-white shadow-2xl animate-pop sm:rounded-3xl"
+        className="modal-surface modal-scroll relative max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-2xl animate-pop sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-slate-100 bg-white/95 px-5 py-4 backdrop-blur">
-          <h2 className="text-xl font-extrabold text-slate-900">{title}</h2>
+        <div className="section-divider sticky top-0 z-10 flex items-center justify-between gap-3 border-b-2 bg-[var(--surface)] px-5 py-4">
+          <h2 className="ink text-xl font-extrabold">{title}</h2>
           <button
             onClick={onClose}
-            className="rounded-full px-3 py-1.5 text-sm font-bold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+            className="history-action rounded-lg px-3 py-1.5 text-sm"
           >
             닫기
           </button>

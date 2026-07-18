@@ -21,10 +21,10 @@ export const SEVERITY_LABEL: Record<Severity, string> = {
 };
 
 export const SEVERITY_STYLE: Record<Severity, string> = {
-  critical: "bg-red-100 text-red-700 ring-red-200",
-  high: "bg-orange-100 text-orange-700 ring-orange-200",
-  medium: "bg-amber-100 text-amber-700 ring-amber-200",
-  low: "bg-sky-100 text-sky-700 ring-sky-200",
+  critical: "risk-critical",
+  high: "risk-danger",
+  medium: "risk-caution",
+  low: "risk-safe",
 };
 
 export const CATEGORY_META: Record<string, { label: string }> = {
@@ -40,49 +40,24 @@ export const CATEGORY_META: Record<string, { label: string }> = {
 
 export interface RiskUi {
   label: string;
-  banner: string;
-  bannerText: string;
-  chip: string;
-  bar: string;
-  ring: string;
-  scoreText: string;
+  tone: string;
 }
 
 export const RISK_UI: Record<RiskLevel, RiskUi> = {
   safe: {
     label: "안전",
-    banner: "bg-emerald-50 border-emerald-200",
-    bannerText: "text-emerald-800",
-    chip: "bg-emerald-100 text-emerald-700",
-    bar: "bg-emerald-500",
-    ring: "ring-emerald-200",
-    scoreText: "text-emerald-600",
+    tone: "risk-safe",
   },
   caution: {
     label: "주의",
-    banner: "bg-amber-50 border-amber-200",
-    bannerText: "text-amber-800",
-    chip: "bg-amber-100 text-amber-700",
-    bar: "bg-amber-500",
-    ring: "ring-amber-200",
-    scoreText: "text-amber-600",
+    tone: "risk-caution",
   },
   danger: {
     label: "위험",
-    banner: "bg-orange-50 border-orange-200",
-    bannerText: "text-orange-800",
-    chip: "bg-orange-100 text-orange-700",
-    bar: "bg-orange-500",
-    ring: "ring-orange-200",
-    scoreText: "text-orange-600",
+    tone: "risk-danger",
   },
   critical: {
     label: "고위험",
-    banner: "bg-red-50 border-red-200",
-    bannerText: "text-red-800",
-    chip: "bg-red-100 text-red-700",
-    bar: "bg-red-500",
-    ring: "ring-red-200",
-    scoreText: "text-red-600",
+    tone: "risk-critical",
   },
 };

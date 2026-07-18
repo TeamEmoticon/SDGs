@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { AnalysisResult } from "@/lib/types";
+import { RISK_UI } from "@/lib/ui-config";
 import {
   clearAnalysisHistory,
   loadAnalysisHistory,
@@ -13,20 +14,6 @@ import {
 interface Props {
   readonly onOpen: (result: AnalysisResult) => void;
 }
-
-const RISK_LABEL = {
-  safe: "안전",
-  caution: "주의",
-  danger: "위험",
-  critical: "고위험",
-} as const;
-
-const RISK_CLASS = {
-  safe: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  caution: "bg-amber-50 text-amber-700 ring-amber-200",
-  danger: "bg-orange-50 text-orange-700 ring-orange-200",
-  critical: "bg-red-50 text-red-700 ring-red-200",
-} as const;
 
 export default function RecentHistory({ onOpen }: Props) {
   const [items, setItems] = useState<readonly AnalysisHistoryItem[]>([]);
@@ -62,20 +49,20 @@ export default function RecentHistory({ onOpen }: Props) {
   };
 
   return (
-    <section className="mx-auto mt-10 max-w-2xl border-t border-slate-200 pt-8" aria-labelledby="recent-history-title">
+    <section className="section-divider mx-auto mt-12 max-w-2xl border-t-2 pt-7" aria-labelledby="recent-history-title">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 id="recent-history-title" className="text-xl font-extrabold text-slate-900">
+          <h2 id="recent-history-title" className="ink text-xl font-black">
             최근 확인한 글
           </h2>
-          <p className="mt-1 text-sm text-slate-500">이 기기에만 안전한 결과 요약을 저장해요.</p>
+          <p className="support-copy mt-1">이 기기에만 결과 요약을 저장해요.</p>
         </div>
         {items.length > 0 && (
           <button
             type="button"
             onClick={handleClear}
             disabled={isClearing}
-            className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:text-slate-400"
+            className="history-action rounded-xl px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
           >
             {confirmClear ? "한 번 더 누르면 모두 지워요" : "기록 모두 지우기"}
           </button>
@@ -83,55 +70,60 @@ export default function RecentHistory({ onOpen }: Props) {
       </div>
 
       {isLoading ? (
-        <div className="mt-4 space-y-3" aria-label="최근 기록을 불러오는 중">
-          <div className="shimmer h-24 rounded-2xl" />
-          <div className="shimmer h-24 rounded-2xl" />
+        <div className="mt-5 space-y-3" aria-label="최근 기록을 불러오는 중">
+          <div className="shimmer h-20 rounded-xl" />
+          <div className="shimmer h-20 rounded-xl" />
         </div>
       ) : items.length === 0 ? (
-        <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-white/70 p-5 text-center">
-          <p className="font-bold text-slate-700">아직 확인한 글이 없습니다.</p>
-          <p className="mt-1 text-sm leading-relaxed text-slate-500">위에서 문자나 인터넷 글을 확인해 보세요.</p>
+        <div className="surface-muted mt-5 border-2 border-dashed border-[var(--line)] p-5 text-center">
+          <p className="ink font-extrabold">아직 확인한 글이 없습니다.</p>
+          <p className="support-copy mt-1">위에서 문자나 인터넷 글을 확인해 보세요.</p>
         </div>
       ) : (
-        <ul className="mt-4 space-y-3">
-          {items.map((item) => (
-            <li key={item.id} className="rounded-2xl border border-slate-200 bg-white p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-bold ring-1 ${RISK_CLASS[item.riskLevel]}`}>
-                      {RISK_LABEL[item.riskLevel]}
-                    </span>
-                    <span className="text-xs font-semibold text-slate-500">
-                      {new Date(item.createdAt).toLocaleString("ko-KR", {
-                        month: "long",
-                        day: "numeric",
-                        hour: "numeric",
-                        minute: "2-digit",
-                      })}
-                    </span>
+        <ul className="history-list mt-5">
+          {items.map((item) => {
+            const risk = RISK_UI[item.riskLevel];
+            return (
+              <li key={item.id} className="py-5 first:pt-0">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`risk-badge ${risk.tone} rounded-full px-2.5 py-1 text-sm`}>
+                        {risk.label}
+                      </span>
+                      <span className="support-copy">
+                        {new Date(item.createdAt).toLocaleString("ko-KR", {
+                          month: "long",
+                          day: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    </div>
+                    <p className="ink mt-3 break-words font-semibold leading-relaxed">
+                      {item.preview || item.result.ai.summary}
+                    </p>
                   </div>
-                  <p className="mt-2 break-words text-sm leading-relaxed text-slate-700">{item.preview || item.result.ai.summary}</p>
+                  <div className="flex shrink-0 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onOpen(restoreAnalysisResult(item))}
+                      className="button-primary rounded-lg px-3 py-2 text-sm"
+                    >
+                      다시 보기
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRemove(item.id)}
+                      className="history-action rounded-lg px-3 py-2 text-sm"
+                    >
+                      지우기
+                    </button>
+                  </div>
                 </div>
-                <div className="flex shrink-0 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onOpen(restoreAnalysisResult(item))}
-                    className="min-h-11 rounded-xl bg-teal-600 px-3 py-2 text-sm font-bold text-white transition hover:bg-teal-700"
-                  >
-                    다시 보기
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleRemove(item.id)}
-                    className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-700 transition hover:border-red-300 hover:bg-red-50"
-                  >
-                    지우기
-                  </button>
-                </div>
-              </div>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>
