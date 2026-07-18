@@ -94,3 +94,38 @@ test("당첨 경품 미끼+단축링크 → 위험 신호(danger 이상)", async
   );
   atLeast(result.riskLevel, "danger");
 });
+
+test("인증번호를 알려주지 말라는 정상 안내 → safe", async () => {
+  const result = await analyze("인증번호를 타인에게 알려주지 마세요. 은행 직원도 인증번호를 요구하지 않습니다.");
+  assert.equal(result.riskLevel, "safe");
+  assert.equal(result.execution?.plannedMode, "AI_SUMMARY");
+});
+
+test("원격제어를 요구하지 않는다는 정상 안내 → safe", async () => {
+  const result = await analyze("고객센터는 원격제어 앱 설치나 화면 공유를 절대 요구하지 않습니다.");
+  assert.equal(result.riskLevel, "safe");
+  assert.equal(result.execution?.plannedMode, "AI_SUMMARY");
+});
+
+test("송금 사기 예방 안내 → safe", async () => {
+  const result = await analyze("사기 예방 안내입니다. 모르는 사람이 송금이나 계좌이체를 요구하면 112에 신고하세요.");
+  assert.equal(result.riskLevel, "safe");
+});
+
+test("계좌번호를 보내 달라는 일상 요청 → caution", async () => {
+  const result = await analyze("엄마, 저녁값 정산하려고 하는데 내 계좌번호 다시 보내줄래?");
+  assert.equal(result.riskLevel, "caution");
+  assert.equal(result.execution?.plannedMode, "AI_SUMMARY");
+});
+
+test("원격제어 RULE_ONLY 결과의 점수는 critical 범위", async () => {
+  const result = await analyze("고객님 컴퓨터가 해킹되었습니다. 복구를 위해 팀뷰어 원격제어 앱을 설치하고 접속 번호를 알려주세요.");
+  assert.equal(result.riskLevel, "critical");
+  assert.ok(result.riskScore >= 46);
+});
+
+test("예방 표현 뒤 실제 인증 요구가 있으면 RULE_ONLY를 유지한다", async () => {
+  const result = await analyze("인증번호는 알려주지 말고 아래 링크에 직접 입력하세요. http://bit.ly/verify-me");
+  assert.equal(result.execution?.plannedMode, "RULE_ONLY");
+  atLeast(result.riskLevel, "danger");
+});

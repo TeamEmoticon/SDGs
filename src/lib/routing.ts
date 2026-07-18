@@ -4,14 +4,13 @@
 // 단일 키워드만으로 확정하지 않고 규칙 두 개 이상의 조합을 사용한다.
 
 import type { AnalysisMode, Signal } from "./types";
+import { ROUTING_REASONS, type RuleOnlyReason } from "./routingPolicy.ts";
 
 export interface RoutingDecision {
   readonly mode: AnalysisMode;
   readonly reasons: readonly string[];
 }
 
-// 규칙(rules.ts)에 대응 카테고리가 있지만, 표현 변형까지 넓게 잡기 위해 텍스트로도 보조 판정한다.
-const REMOTE_CONTROL = /원격\s?제어|원격\s?지원|원격\s?조종|화면\s?공유|팀뷰어|teamviewer|애니데스크|anydesk|퀵서포트|quicksupport/i;
 const CREDENTIAL_REQUEST = /인증\s?번호|비밀\s?번호|보안\s?카드|otp|공동\s?인증서|금융\s?인증서/i;
 
 // 검증 가능한 공공 주장 판정용
@@ -33,8 +32,8 @@ function hasId(signals: readonly Signal[], id: string): boolean {
 }
 
 /** 명백한 사기 조합인지 — 규칙 두 개 이상의 조합(또는 단독으로도 확정적인 요구)으로 판정. */
-export function hasCriticalScamCombination(signals: readonly Signal[], text: string): string[] {
-  const reasons: string[] = [];
+export function hasCriticalScamCombination(signals: readonly Signal[], text: string): RuleOnlyReason[] {
+  const reasons: RuleOnlyReason[] = [];
   const impersonation = hasCategory(signals, "impersonation") || hasCategory(signals, "acquaintance");
   const money = hasCategory(signals, "money");
   const urgency = hasCategory(signals, "urgency");
@@ -43,14 +42,14 @@ export function hasCriticalScamCombination(signals: readonly Signal[], text: str
   const personalInfo = hasCategory(signals, "personalinfo");
   const appInstall = hasId(signals, "link-install");
   const credentialRequest = hasId(signals, "pinfo-secrets") || CREDENTIAL_REQUEST.test(text);
-  const remoteControl = hasCategory(signals, "remote") || REMOTE_CONTROL.test(text);
+  const remoteControl = hasCategory(signals, "remote");
 
-  if (impersonation && money) reasons.push("impersonation_with_money");
-  if (money && urgency) reasons.push("money_with_urgency");
-  if (credentialRequest && link) reasons.push("credential_request_with_link");
-  if (remoteControl) reasons.push("remote_control_request");
-  if (appInstall && (money || personalInfo)) reasons.push("app_install_with_sensitive_request");
-  if (coercion && (money || personalInfo)) reasons.push("coercion_with_payment_or_personal_info");
+  if (impersonation && money) reasons.push(ROUTING_REASONS.impersonationWithMoney);
+  if (money && urgency) reasons.push(ROUTING_REASONS.moneyWithUrgency);
+  if (credentialRequest && link) reasons.push(ROUTING_REASONS.credentialRequestWithLink);
+  if (remoteControl) reasons.push(ROUTING_REASONS.remoteControlRequest);
+  if (appInstall && (money || personalInfo)) reasons.push(ROUTING_REASONS.appInstallWithSensitiveRequest);
+  if (coercion && (money || personalInfo)) reasons.push(ROUTING_REASONS.coercionWithPaymentOrPersonalInfo);
 
   return reasons;
 }
@@ -72,8 +71,8 @@ export function chooseAnalysisMode(signals: readonly Signal[], text: string): Ro
   }
 
   if (hasCheckablePublicClaim(text)) {
-    return { mode: "GROUNDED_FACT_CHECK", reasons: ["checkable_public_claim"] };
+    return { mode: "GROUNDED_FACT_CHECK", reasons: [ROUTING_REASONS.checkablePublicClaim] };
   }
 
-  return { mode: "AI_SUMMARY", reasons: ["general_explanation_needed"] };
+  return { mode: "AI_SUMMARY", reasons: [ROUTING_REASONS.generalExplanationNeeded] };
 }

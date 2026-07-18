@@ -1,4 +1,5 @@
 import type { AiAnalysis, RiskLevel, RiskVerdict, Signal } from "./types";
+import { RULE_ONLY_FLOORS, isRuleOnlyReason } from "./routingPolicy.ts";
 
 /**
  * Final risk computation (done in code, not by the model).
@@ -55,28 +56,12 @@ function maxLevel(a: RiskLevel, b: RiskLevel): RiskLevel {
  * 나머지 RULE_ONLY 조합은 최소 danger를 보장한다(신호 가중치가 낮아도
  * "사기로 판단했는데 화면은 안전"이라는 모순이 생기지 않도록 하는 안전장치).
  */
-const RULE_ONLY_CRITICAL_REASONS = new Set([
-  "remote_control_request",
-  "impersonation_with_money",
-  "coercion_with_payment_or_personal_info",
-]);
-
-// routing.ts의 hasCriticalScamCombination이 낼 수 있는 이유 코드 전체.
-// 다른 모드(AI_SUMMARY의 "general_explanation_needed" 등)와 겹치지 않도록
-// 반드시 이 집합에 속한 이유 코드가 있을 때만 등급 하한을 적용한다.
-const RULE_ONLY_REASON_CODES = new Set([
-  "impersonation_with_money",
-  "money_with_urgency",
-  "credential_request_with_link",
-  "remote_control_request",
-  "app_install_with_sensitive_request",
-  "coercion_with_payment_or_personal_info",
-]);
+const MINIMUM_SCORE: Record<RiskLevel, number> = { safe: 0, caution: 1, danger: 19, critical: 46 };
 
 function ruleOnlyFloor(routingReasons: readonly string[]): RiskLevel | null {
-  const matched = routingReasons.filter((reason) => RULE_ONLY_REASON_CODES.has(reason));
-  if (matched.length === 0) return null;
-  return matched.some((reason) => RULE_ONLY_CRITICAL_REASONS.has(reason)) ? "critical" : "danger";
+  const floors = routingReasons.filter(isRuleOnlyReason).map((reason) => RULE_ONLY_FLOORS[reason]);
+  if (floors.length === 0) return null;
+  return floors.includes("critical") ? "critical" : "danger";
 }
 
 function levelFromScore(score: number): RiskLevel {
@@ -117,11 +102,11 @@ export function calculateRisk(
 
   // AI 보조 신호는 총합 최대 10점까지만 더한다.
   const aiScore = analysis.used ? Math.min(analysis.riskPhrases.length * 4, AI_SIGNAL_SCORE_CAP) : 0;
-  const score = Math.min(ruleScore + aiScore, 100);
+  const rawScore = Math.min(ruleScore + aiScore, 100);
 
   const hasCritical = signals.some((s) => s.severity === "critical");
 
-  let level = levelFromScore(score);
+  let level = levelFromScore(rawScore);
 
   // AI 보조 신호만으로는 danger/critical을 만들지 않는다.
   // 규칙 점수 기준 등급이 caution 이하이면 등급 상한을 caution으로 제한한다.
@@ -132,13 +117,14 @@ export function calculateRisk(
 
   // 규칙 기반의 명백한 critical 신호는 등급을 끌어올린다(규칙만으로 확정).
   if (hasCritical && level === "caution") level = "danger";
-  if (hasCritical && score >= 50) level = "critical";
+  if (hasCritical && rawScore >= 50) level = "critical";
 
   // 라우터가 RULE_ONLY(명백한 사기 조합)로 판정했다면, 신호 가중치가 낮게 잡혔더라도
   // "사기로 판단했는데 화면은 안전/주의"라는 모순이 생기지 않도록 등급 하한을 둔다.
   const floor = ruleOnlyFloor(routingReasons);
   if (floor !== null) level = maxLevel(level, floor);
 
+  const score = Math.max(rawScore, MINIMUM_SCORE[level]);
   return { level, score, recommendation: RECOMMENDATION[level] };
 }
 
