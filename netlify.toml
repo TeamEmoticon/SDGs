@@ -9,3 +9,9 @@
   to = "/.netlify/functions/analyze"
   status = 200
   force = true
+
+[[redirects]]
+  from = "/api/tts"
+  to = "/.netlify/functions/tts"
+  status = 200
+  force = true

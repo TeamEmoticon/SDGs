@@ -1,21 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import type { AnalysisResult, RiskLevel, SensitiveKind } from "@/lib/types";
+import type { AnalysisResult, SensitiveKind } from "@/lib/types";
 import AnalysisEvidenceView from "@/components/AnalysisEvidenceView";
-import { RISK_UI, SENSITIVE_LABEL } from "@/lib/ui-config";
+import ResultSpeechButton from "@/components/ResultSpeechButton";
+import { LEVEL_STORY, RISK_UI, SENSITIVE_LABEL } from "@/lib/ui-config";
 
 interface Props {
   result: AnalysisResult;
   onReset: () => void;
 }
-
-const LEVEL_STORY: Record<RiskLevel, string> = {
-  safe: "뚜렷한 위험 신호가 적습니다.",
-  caution: "한 번 더 확인해 주세요.",
-  danger: "사기·피싱일 가능성이 높습니다.",
-  critical: "사기·피싱일 가능성이 매우 높습니다. 지금 행동을 멈추세요.",
-};
 
 // 낮은 등급에도 항상 표시하는 안내(안전을 보장하지 않는다).
 const SAFETY_DISCLAIMER =
@@ -74,6 +68,10 @@ export default function ResultView({ result, onReset }: Props) {
           </div>
         </div>
       </section>
+
+      <div className="mt-5">
+        <ResultSpeechButton key={result.createdAt} result={result} />
+      </div>
 
       <section className="section-divider mt-7 border-t-2 pt-6">
         <h2 className="ink text-xl font-black">지금 할 일</h2>

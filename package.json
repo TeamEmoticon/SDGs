@@ -8,10 +8,11 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "node --test tests/analysis.test.ts tests/analysisHistory.test.ts tests/geminiResponse.test.ts tests/routing.test.ts tests/domain.test.ts tests/analyzeFlow.test.ts tests/goldenCases.test.ts tests/pwa.test.ts tests/analysisFormState.test.ts tests/securityDeployment.test.ts",
+    "test": "node --test tests/analysis.test.ts tests/analysisHistory.test.ts tests/geminiResponse.test.ts tests/routing.test.ts tests/domain.test.ts tests/analyzeFlow.test.ts tests/goldenCases.test.ts tests/pwa.test.ts tests/analysisFormState.test.ts tests/securityDeployment.test.ts tests/tts.test.ts",
     "evaluate:analysis": "node --env-file-if-exists=.env.local scripts/evaluate-analysis.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-polly": "^3.1090.0",
     "next": "16.2.6",
     "react": "19.2.6",
     "react-dom": "19.2.6"

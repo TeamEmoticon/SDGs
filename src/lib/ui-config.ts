@@ -61,3 +61,14 @@ export const RISK_UI: Record<RiskLevel, RiskUi> = {
     tone: "risk-critical",
   },
 };
+
+/**
+ * 위험 단계별로 화면에 보여주는 설명 문구.
+ * 결과 화면(ResultView)과 음성 읽기(buildSpeechText)가 같은 문구를 쓰도록 여기서 공유한다.
+ */
+export const LEVEL_STORY: Record<RiskLevel, string> = {
+  safe: "뚜렷한 위험 신호가 적습니다.",
+  caution: "한 번 더 확인해 주세요.",
+  danger: "사기·피싱일 가능성이 높습니다.",
+  critical: "사기·피싱일 가능성이 매우 높습니다. 지금 행동을 멈추세요.",
+};
