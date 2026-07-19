@@ -63,28 +63,6 @@ export interface DifficultTerm {
   readonly easyMeaning: string;
 }
 
-export interface GroundingSource {
-  readonly title: string;
-  readonly url: string;
-}
-
-export interface GroundingEvidence {
-  readonly sources: readonly GroundingSource[];
-  readonly searchSuggestionHtml?: string;
-  readonly hasLinkedSupport?: boolean;
-}
-
-export const FACT_CHECK_VERDICTS = ["supported", "contradicted", "mixed", "insufficient_evidence"] as const;
-
-export type FactCheckVerdict = (typeof FACT_CHECK_VERDICTS)[number];
-
-export interface FactCheckResult {
-  readonly claimQuote: string;
-  readonly verdict: FactCheckVerdict;
-  readonly explanation: string;
-  readonly evidenceStrength: "linked" | "limited";
-}
-
 export const MESSAGE_TYPES = [
   "family_impersonation",
   "government_impersonation",
@@ -121,8 +99,6 @@ export interface AiAnalysis {
   readonly used: boolean;
   readonly messageType?: MessageType;
   readonly requestedActions?: readonly RequestedAction[];
-  readonly grounding?: GroundingEvidence;
-  readonly factCheck?: FactCheckResult;
 }
 
 export interface RiskVerdict {
@@ -135,9 +111,8 @@ export interface RiskVerdict {
  * Which analysis path a message is planned for / actually ran through.
  * RULE_ONLY: obvious scam handled by rules, no AI call.
  * AI_SUMMARY: easy-language AI explanation.
- * GROUNDED_FACT_CHECK: a checkable public claim (grounded fact-check path).
  */
-export type AnalysisMode = "RULE_ONLY" | "AI_SUMMARY" | "GROUNDED_FACT_CHECK";
+export type AnalysisMode = "RULE_ONLY" | "AI_SUMMARY";
 
 /** Outcome of the (optional) AI provider call for one analysis. */
 export type AiStatus =

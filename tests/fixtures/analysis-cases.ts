@@ -294,7 +294,7 @@ export const TEST_CASES: readonly AnalysisTestCase[] = [
     inputType: "text",
     input: "속보! 정부가 다음 달부터 만 19세 이상 전 국민에게 민생지원금 50만원을 조건 없이 지급하기로 확정 발표했습니다.",
     expected: {
-      plannedMode: "GROUNDED_FACT_CHECK",
+      plannedMode: "AI_SUMMARY",
       acceptableRiskLevels: ["safe", "caution"],
       aiCallExpected: true,
       notes: "검증 가능한 공공 주장. Grounding으로 사실 여부 확인이 필요한 전형적 사례.",
@@ -307,7 +307,7 @@ export const TEST_CASES: readonly AnalysisTestCase[] = [
     inputType: "text",
     input: "충격! 기초연금 제도가 내년부터 전면 폐지된다고 합니다. 수급자들은 서둘러 신청을 마감해야 한다고 합니다.",
     expected: {
-      plannedMode: "GROUNDED_FACT_CHECK",
+      plannedMode: "AI_SUMMARY",
       acceptableRiskLevels: ["safe", "caution"],
       aiCallExpected: true,
       notes: "제도 폐지 주장 — 검증 가능한 정책 주장의 또 다른 유형.",
@@ -320,7 +320,7 @@ export const TEST_CASES: readonly AnalysisTestCase[] = [
     inputType: "text",
     input: "정부에서 국민 대상 지원금을 지급한다고 합니다. 자세한 대상과 일정은 아직 공개되지 않았습니다.",
     expected: {
-      plannedMode: "GROUNDED_FACT_CHECK",
+      plannedMode: "AI_SUMMARY",
       acceptableRiskLevels: ["safe", "caution", "unknown"],
       aiCallExpected: true,
       notes: "조건이 누락돼 사실 확정이 어려운 경계 사례 — acceptableRiskLevels를 넓게 설정.",
@@ -335,7 +335,7 @@ export const TEST_CASES: readonly AnalysisTestCase[] = [
     inputType: "text",
     input: "이 버섯 추출물을 3일만 드시면 관절염이 완치된다는 이야기가 있습니다. 의사들이 쉬쉬하는 진실이라고 합니다.",
     expected: {
-      plannedMode: "GROUNDED_FACT_CHECK",
+      plannedMode: "AI_SUMMARY",
       acceptableRiskLevels: ["safe", "caution"],
       aiCallExpected: true,
       notes: "건강 완치 주장 + 은폐 프레이밍(쉬쉬). 실제로는 허위 건강정보일 가능성이 높은 사례.",
@@ -348,7 +348,7 @@ export const TEST_CASES: readonly AnalysisTestCase[] = [
     inputType: "text",
     input: "혈압약은 몸에 안 좋으니 끊으시고, 이 차만 꾸준히 드시면 완치됩니다. 병원보다 이게 더 효과적입니다.",
     expected: {
-      plannedMode: "GROUNDED_FACT_CHECK",
+      plannedMode: "AI_SUMMARY",
       acceptableRiskLevels: ["safe", "caution"],
       aiCallExpected: true,
       notes: "약 복용 중단 권유는 실제 위해 가능성이 커 최우선 주의가 필요하지만, 현재 위험 점수 체계는 사기 신호가 아니면 낮게 나온다 — 한계로 기록.",
@@ -389,7 +389,7 @@ export const TEST_CASES: readonly AnalysisTestCase[] = [
     inputType: "text",
     input: "정부 발표에 따르면 내년 최저임금이 시간당 11,000원으로 인상되며 1월 1일부터 시행됩니다.",
     expected: {
-      plannedMode: "GROUNDED_FACT_CHECK",
+      plannedMode: "AI_SUMMARY",
       acceptableRiskLevels: ["safe"],
       aiCallExpected: true,
       notes: "날짜·수치가 명확한 정책 뉴스. 검증 가능한 사실 주장의 표준 사례.",
@@ -415,7 +415,7 @@ export const TEST_CASES: readonly AnalysisTestCase[] = [
     inputType: "text",
     input: "정부가 숨기는 진실이 있다는 소문이 인터넷에서 빠르게 퍼지고 있습니다. 자세한 내용은 아직 확인되지 않았습니다.",
     expected: {
-      plannedMode: "GROUNDED_FACT_CHECK",
+      plannedMode: "AI_SUMMARY",
       acceptableRiskLevels: ["safe", "unknown"],
       aiCallExpected: true,
       notes: "은폐 프레이밍만 있고 구체적 주장은 없는 클릭베이트형 — 근거 부족 사례로 경계·불확실 항목에도 기재.",
@@ -475,7 +475,7 @@ export const TEST_CASES: readonly AnalysisTestCase[] = [
       plannedMode: "AI_SUMMARY",
       acceptableRiskLevels: ["safe"],
       aiCallExpected: true,
-      notes: "일반 광고 문구 — OPINION_OR_AD 필터로 GROUNDED_FACT_CHECK로 새지 않아야 한다.",
+      notes: "일반 광고 문구 — 사실 확인 대상이 아니라 AI_SUMMARY로 남아야 한다.",
     },
   },
 

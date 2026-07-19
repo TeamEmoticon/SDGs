@@ -1,12 +1,6 @@
 import { MESSAGE_TYPES, REQUESTED_ACTIONS } from "../lib/types.ts";
 import type { AiAnalysis, AiFailureStatus } from "../lib/types";
-import {
-  isSafetyBlocked,
-  parseGeminiAnalysis,
-  parseGeminiJson,
-  parseGroundingEvidence,
-  readModelText,
-} from "./geminiParsing.ts";
+import { isSafetyBlocked, parseGeminiAnalysis, parseGeminiJson, readModelText } from "./geminiParsing.ts";
 
 const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.1-flash-lite";
@@ -164,4 +158,4 @@ export async function requestGeminiAnalysis(
   }
 }
 
-export { EMPTY_ANALYSIS, parseGeminiAnalysis, parseGeminiJson, parseGroundingEvidence };
+export { EMPTY_ANALYSIS, parseGeminiAnalysis, parseGeminiJson };

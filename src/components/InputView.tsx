@@ -13,7 +13,6 @@ interface Props {
   setUrl: (url: string) => void;
   onAnalyze: () => void;
   error: string | null;
-  urlNote: string | null;
   onExamples: () => void;
 }
 
@@ -26,7 +25,6 @@ export default function InputView({
   setUrl,
   onAnalyze,
   error,
-  urlNote,
   onExamples,
 }: Props) {
   const canSubmit = canAnalyzeForm(mode, text, url);
@@ -63,13 +61,6 @@ export default function InputView({
             의심 링크 검사
           </button>
         </div>
-
-        {urlNote && mode === "text" && (
-          <div className="notice-warning mt-4 rounded-xl p-4 animate-fade" role="status">
-              <p className="font-bold">링크 내용은 읽지 않아요</p>
-            <p className="mt-1 font-semibold leading-relaxed">{urlNote}</p>
-          </div>
-        )}
 
         <div className="mt-5">
           {mode === "text" ? (

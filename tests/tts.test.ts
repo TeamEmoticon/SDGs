@@ -64,22 +64,27 @@ test("위험 이유는 최대 3개만 읽는다", () => {
   assert.ok(!speech.includes("네 번째 위험 이유"));
 });
 
-test("권장 행동은 최대 3개만 읽는다", () => {
-  const speech = buildSpeechText(
-    makeResult({
-      ai: {
-        ...makeResult().ai,
-        actions: ["링크를 누르지 마세요", "고객센터에 전화하세요", "인증번호를 알려주지 마세요", "네 번째 행동입니다"],
-      },
-    }),
-  );
-  assert.ok(speech.includes("고객센터에 전화하세요"));
-  assert.ok(!speech.includes("네 번째 행동입니다"));
+test("지금 할 일은 화면과 동일한 문구(getImmediateActions)를 읽는다", () => {
+  const speech = buildSpeechText(makeResult({ ai: { ...makeResult().ai, messageType: "financial_impersonation" } }));
+  assert.ok(speech.includes("지금 할 일입니다"));
+  assert.ok(speech.includes("문자 속 번호나 링크를 이용하지 마세요"));
 });
 
-test("actions가 없으면 권장 안내 문장을 읽는다", () => {
-  const speech = buildSpeechText(makeResult({ ai: { ...makeResult().ai, actions: [] } }));
-  assert.ok(speech.includes("돈을 보내거나 인증번호를 알려주지 마세요"));
+test("messageType이 없으면 위험 단계에 맞는 기본 할 일을 읽는다", () => {
+  const speech = buildSpeechText(makeResult({ riskLevel: "critical" }));
+  assert.ok(speech.includes("돈·개인정보·앱 설치를 요구하면 바로 멈추세요"));
+});
+
+test("사기꾼이 요구한 행동(requestedActions)을 지금 할 일로 읽지 않는다", () => {
+  // 과거 회귀: "지금 할 일입니다. 첫째, 돈 보내기"처럼 사기 요구를 할 일로 읽었다.
+  const speech = buildSpeechText(
+    makeResult({
+      ai: { ...makeResult().ai, messageType: "financial_impersonation", requestedActions: ["send_money", "open_link"] },
+    }),
+  );
+  const todoPart = speech.slice(speech.indexOf("지금 할 일입니다"));
+  assert.ok(!todoPart.includes("돈 보내기"));
+  assert.ok(!todoPart.includes("링크 열기"));
 });
 
 test("마스킹된 개인정보(●)를 읽지 않는다", () => {
@@ -150,46 +155,71 @@ test("2,000자 초과는 413 TEXT_TOO_LONG", async () => {
   assert.equal(result.code, "TEXT_TOO_LONG");
 });
 
-test("AWS 키가 없으면 503 TTS_NOT_CONFIGURED (실제 호출 없음)", async () => {
-  const savedId = process.env.AWS_ACCESS_KEY_ID;
-  const savedSecret = process.env.AWS_SECRET_ACCESS_KEY;
-  delete process.env.AWS_ACCESS_KEY_ID;
-  delete process.env.AWS_SECRET_ACCESS_KEY;
-  try {
-    const result = await handleTtsRequest({ text: "위험 신호가 높습니다." });
-    assert.equal(result.ok, false);
-    if (result.ok) return;
-    assert.equal(result.status, 503);
-    assert.equal(result.code, "TTS_NOT_CONFIGURED");
-  } finally {
-    if (savedId !== undefined) process.env.AWS_ACCESS_KEY_ID = savedId;
-    if (savedSecret !== undefined) process.env.AWS_SECRET_ACCESS_KEY = savedSecret;
+function withEnv(overrides: Record<string, string | undefined>, run: () => void | Promise<void>): Promise<void> | void {
+  const saved = new Map<string, string | undefined>();
+  for (const [key, value] of Object.entries(overrides)) {
+    saved.set(key, process.env[key]);
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
   }
+  const restore = () => {
+    for (const [key, value] of saved) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  };
+  try {
+    const outcome = run();
+    if (outcome instanceof Promise) return outcome.finally(restore);
+    restore();
+  } catch (error) {
+    restore();
+    throw error;
+  }
+}
+
+test("Polly 키가 없으면 503 TTS_NOT_CONFIGURED (실제 호출 없음)", async () => {
+  await withEnv(
+    { POLLY_AWS_ACCESS_KEY_ID: undefined, POLLY_AWS_SECRET_ACCESS_KEY: undefined },
+    async () => {
+      const result = await handleTtsRequest({ text: "위험 신호가 높습니다." });
+      assert.equal(result.ok, false);
+      if (result.ok) return;
+      assert.equal(result.status, 503);
+      assert.equal(result.code, "TTS_NOT_CONFIGURED");
+    },
+  );
 });
 
 // ---- Polly 서비스 (주입된 mock client, 실제 SDK 호출 없음) ------------------
 
-test("recognizes POLLY_AWS credentials", () => {
-  const savedId = process.env.POLLY_AWS_ACCESS_KEY_ID;
-  const savedSecret = process.env.POLLY_AWS_SECRET_ACCESS_KEY;
-  const savedAwsId = process.env.AWS_ACCESS_KEY_ID;
-  const savedAwsSecret = process.env.AWS_SECRET_ACCESS_KEY;
-  process.env.POLLY_AWS_ACCESS_KEY_ID = "test-polly-access-key";
-  process.env.POLLY_AWS_SECRET_ACCESS_KEY = "test-polly-secret-key";
-  delete process.env.AWS_ACCESS_KEY_ID;
-  delete process.env.AWS_SECRET_ACCESS_KEY;
-  try {
-    assert.equal(isPollyConfigured(), true);
-  } finally {
-    if (savedId === undefined) delete process.env.POLLY_AWS_ACCESS_KEY_ID;
-    else process.env.POLLY_AWS_ACCESS_KEY_ID = savedId;
-    if (savedSecret === undefined) delete process.env.POLLY_AWS_SECRET_ACCESS_KEY;
-    else process.env.POLLY_AWS_SECRET_ACCESS_KEY = savedSecret;
-    if (savedAwsId === undefined) delete process.env.AWS_ACCESS_KEY_ID;
-    else process.env.AWS_ACCESS_KEY_ID = savedAwsId;
-    if (savedAwsSecret === undefined) delete process.env.AWS_SECRET_ACCESS_KEY;
-    else process.env.AWS_SECRET_ACCESS_KEY = savedAwsSecret;
-  }
+test("POLLY_AWS_* 자격 증명을 인식한다", () => {
+  withEnv(
+    {
+      POLLY_AWS_ACCESS_KEY_ID: "test-polly-access-key",
+      POLLY_AWS_SECRET_ACCESS_KEY: "test-polly-secret-key",
+    },
+    () => {
+      assert.equal(isPollyConfigured(), true);
+    },
+  );
+});
+
+test("Lambda가 주입하는 AWS_* 이름은 자격 증명으로 인정하지 않는다", () => {
+  // Netlify Functions(AWS Lambda)는 AWS_ACCESS_KEY_ID 등에 자체 값을 자동 주입한다.
+  // 이 값이 Polly 자격 증명으로 오인되면 권한 없는 키로 호출돼 API 오류가 난다(회귀 방지).
+  withEnv(
+    {
+      POLLY_AWS_ACCESS_KEY_ID: undefined,
+      POLLY_AWS_SECRET_ACCESS_KEY: undefined,
+      AWS_ACCESS_KEY_ID: "lambda-injected-key",
+      AWS_SECRET_ACCESS_KEY: "lambda-injected-secret",
+      AWS_SESSION_TOKEN: "lambda-injected-token",
+    },
+    () => {
+      assert.equal(isPollyConfigured(), false);
+    },
+  );
 });
 
 interface CommandLike {

@@ -11,11 +11,11 @@ const DEFAULT_REGION = "ap-northeast-2";
 const DEFAULT_VOICE = "Seoyeon";
 const DEFAULT_ENGINE = "neural";
 
-export interface TtsSuccess {
+interface TtsSuccess {
   readonly ok: true;
   readonly audio: Uint8Array;
 }
-export interface TtsFailure {
+interface TtsFailure {
   readonly ok: false;
   readonly status: number;
   readonly code: string;
@@ -31,7 +31,7 @@ export interface SpeechClient {
   ): Promise<{ AudioStream?: { transformToByteArray(): Promise<Uint8Array> } }>;
 }
 
-export interface SynthesizeDeps {
+interface SynthesizeDeps {
   readonly client?: SpeechClient;
 }
 
@@ -39,45 +39,30 @@ function fail(status: number, code: string, message: string): TtsFailure {
   return { ok: false, status, code, message };
 }
 
-/** AWS 자격 증명 환경변수가 있는지(값은 확인만, 노출하지 않음). */
+// 자격 증명은 POLLY_AWS_* 이름만 읽는다. AWS_* 폴백은 절대 두지 않는다:
+// Netlify Functions(AWS Lambda)는 AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY/AWS_SESSION_TOKEN에
+// Lambda 자체 자격 증명을 자동 주입하므로, 폴백이 있으면 Polly 권한이 없는 키나
+// 엉뚱한 세션 토큰이 섞여 들어가 API 오류가 난다.
+
+/** Polly 자격 증명 환경변수가 있는지(값은 확인만, 노출하지 않음). */
 export function isPollyConfigured(): boolean {
-  return Boolean(getPollyAccessKeyId() && getPollySecretAccessKey());
-}
-
-function getPollyAccessKeyId(): string | undefined {
-  return process.env.POLLY_AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID;
-}
-
-function getPollySecretAccessKey(): string | undefined {
-  return process.env.POLLY_AWS_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY;
-}
-
-function getPollyRegion(): string {
-  return process.env.POLLY_AWS_REGION || process.env.AWS_REGION || DEFAULT_REGION;
+  return Boolean(process.env.POLLY_AWS_ACCESS_KEY_ID && process.env.POLLY_AWS_SECRET_ACCESS_KEY);
 }
 
 function createPollyClient(): SpeechClient {
-  const accessKeyId = getPollyAccessKeyId();
-  const secretAccessKey = getPollySecretAccessKey();
-  const sessionToken = process.env.POLLY_AWS_SESSION_TOKEN || process.env.AWS_SESSION_TOKEN;
-  const region = getPollyRegion();
-
-  if (accessKeyId && secretAccessKey) {
-    return new PollyClient({
-      region,
-      credentials: {
-        accessKeyId,
-        secretAccessKey,
-        ...(sessionToken ? { sessionToken } : {}),
-      },
-    }) as unknown as SpeechClient;
-  }
-
-  return new PollyClient({ region }) as unknown as SpeechClient;
+  const sessionToken = process.env.POLLY_AWS_SESSION_TOKEN;
+  return new PollyClient({
+    region: process.env.POLLY_AWS_REGION || DEFAULT_REGION,
+    credentials: {
+      accessKeyId: process.env.POLLY_AWS_ACCESS_KEY_ID ?? "",
+      secretAccessKey: process.env.POLLY_AWS_SECRET_ACCESS_KEY ?? "",
+      ...(sessionToken ? { sessionToken } : {}),
+    },
+  }) as unknown as SpeechClient;
 }
 
 /** 서버에서 다시 한 번 공백·제어문자를 정리한다(클라이언트 검증만 믿지 않는다). */
-export function sanitizeServerText(raw: string): string {
+function sanitizeServerText(raw: string): string {
   return raw
     .normalize("NFC")
     .replace(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/gu, " ")
@@ -111,7 +96,7 @@ function mapAwsError(error: unknown): TtsFailure {
  * 텍스트를 Amazon Polly로 합성해 MP3 바이트를 반환한다.
  * 자격 증명 확인은 handleTtsRequest에서 하며, 여기서는 client가 있으면 그대로 사용한다.
  */
-export async function synthesizeSpeech(text: string, deps: SynthesizeDeps = {}): Promise<TtsResult> {
+async function synthesizeSpeech(text: string, deps: SynthesizeDeps = {}): Promise<TtsResult> {
   const client = deps.client ?? createPollyClient();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -171,5 +156,3 @@ export async function handleTtsRequest(body: unknown, deps: SynthesizeDeps = {})
 export function toAudioBody(audio: Uint8Array): ArrayBuffer {
   return audio.buffer.slice(audio.byteOffset, audio.byteOffset + audio.byteLength) as ArrayBuffer;
 }
-
-export { MAX_TEXT_LENGTH };

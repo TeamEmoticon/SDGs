@@ -28,11 +28,16 @@
 
 ### 2-1. 실제 AWS 키 smoke test (완료 조건상 반드시 필요, 최우선)
 지금까지는 **키 없는 경로만** 검증했다. 실제 자격 증명으로 아래를 1회 확인해야 "완전 검증"으로 볼 수 있다.
-1. `project/.env.local`에 `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`(SynthesizeSpeech 권한만) 입력. 키 값은 출력하지 않는다.
+
+> **환경변수 이름 주의**: 반드시 `POLLY_AWS_ACCESS_KEY_ID` / `POLLY_AWS_SECRET_ACCESS_KEY`를 쓴다.
+> `AWS_*` 이름은 Netlify Functions(AWS Lambda)가 **자체 자격 증명을 자동 주입하는 예약 이름**이라
+> 사용자가 설정할 수 없고, 코드도 읽지 않는다(과거 이 이름을 썼다가 Lambda 키가 섞여 API 오류가 났다).
+
+1. `project/.env.local`에 `POLLY_AWS_ACCESS_KEY_ID` / `POLLY_AWS_SECRET_ACCESS_KEY`(SynthesizeSpeech 권한만) 입력. 키 값은 출력하지 않는다.
 2. `npm run dev` → 사기 예시 분석 → [결과 소리로 듣기] 클릭.
    - 확인: 한국어 발음, MP3 재생, 중지 동작, **다시 듣기 시 `/api/tts` 재호출 없음**(네트워크 탭), 새 분석 시 새 음성 생성, 모바일 Chrome 재생, 최근 기록에서 연 결과 재생.
 3. IAM 정책은 `polly:SynthesizeSpeech`만(폭넓은 권한 금지).
-4. Netlify에는 같은 키를 **Functions 런타임 secret 환경변수**로만 등록(netlify.toml·저장소 금지). `.env.example`에는 이름만 있다.
+4. Netlify에는 같은 키를 **Functions 런타임 secret 환경변수**로만, `POLLY_AWS_*` 이름으로 등록(netlify.toml·저장소 금지). `.env.example`에는 이름만 있다.
 5. 확인 후 테스트 키는 회전/폐기.
 
 > 참고: `pollyTts.ts`의 오류 매핑(`httpStatusToFailure` 대응부 `mapAwsError`)은 AWS 오류명/`$metadata.httpStatusCode` 추정에 기반한다. 실제 응답으로 AccessDenied·Throttling·Timeout 매핑이 기대대로인지 확인하면 좋다.

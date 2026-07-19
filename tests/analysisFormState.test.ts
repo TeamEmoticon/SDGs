@@ -10,7 +10,6 @@ test("creates an empty text form when starting another analysis", () => {
     text: "",
     url: "",
     error: null,
-    urlNote: null,
   });
 });
 

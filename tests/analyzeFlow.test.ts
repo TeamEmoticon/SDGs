@@ -152,9 +152,6 @@ test("provider 내부 예외는 HTTP 200 규칙 폴백으로 변환된다", asyn
     async summarize() {
       throw new Error("boom");
     },
-    async factCheck() {
-      throw new Error("boom");
-    },
   };
   const result = await successResult(req("고객님, 카드 대금 결제 예정 안내입니다. 감사합니다."), throwing);
   assert.equal(result.execution?.aiStatus, "upstream_error");

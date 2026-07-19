@@ -5,13 +5,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function errorBody(code: string, message: string): Record<string, unknown> {
-  const body: Record<string, unknown> = { error: { code, message } };
-  // 클라이언트가 URL 읽기 실패를 감지해 붙여넣기 모드로 전환할 수 있게 플래그를 유지한다.
-  if (code === "URL_UNREADABLE") {
-    body.urlFetchFailed = true;
-    body.message = message;
-  }
-  return body;
+  return { error: { code, message } };
 }
 
 export async function POST(req: Request) {

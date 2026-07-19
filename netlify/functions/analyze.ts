@@ -10,12 +10,7 @@ export const config = {
 } as const;
 
 function errorBody(code: string, message: string): Record<string, unknown> {
-  const body: Record<string, unknown> = { error: { code, message } };
-  if (code === "URL_UNREADABLE") {
-    body.urlFetchFailed = true;
-    body.message = message;
-  }
-  return body;
+  return { error: { code, message } };
 }
 
 export default async function analyze(request: Request): Promise<Response> {

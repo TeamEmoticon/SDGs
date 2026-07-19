@@ -41,16 +41,6 @@ function isContrastMode(value: string | null): value is ContrastMode {
   return value === "normal" || value === "high";
 }
 
-function readApiMessage(value: unknown, key: string): string | null {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
-  const message = Reflect.get(value, key);
-  return typeof message === "string" ? message : null;
-}
-
-function hasApiFlag(value: unknown, key: string): boolean {
-  return typeof value === "object" && value !== null && !Array.isArray(value) && Reflect.get(value, key) === true;
-}
-
 // 오류 응답은 { error: { code, message } } 형태(구버전은 { error: "..." } 문자열).
 function readErrorMessage(value: unknown): string | null {
   if (typeof value !== "object" || value === null) return null;
@@ -77,7 +67,6 @@ export default function Analyzer() {
   const [url, setUrl] = useState("");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [urlNote, setUrlNote] = useState<string | null>(null);
   const [fontScale, setFontScale] = useState<FontScale>(() => {
     if (typeof window === "undefined") return "normal";
     try {
@@ -137,7 +126,6 @@ export default function Analyzer() {
     const content = getAnalysisContent(mode, text, url);
     requestInFlightRef.current = true;
     setError(null);
-    setUrlNote(null);
     setLoadingStep(0);
     setScreen("analyzing");
     scrollTop();
@@ -160,13 +148,6 @@ export default function Analyzer() {
         throw new Error("분석 결과를 읽지 못했습니다. 다시 시도해 주세요.");
       }
       if (!res.ok) {
-        if (hasApiFlag(data, "urlFetchFailed")) {
-          setUrlNote(readApiMessage(data, "message") ?? "페이지 내용을 읽지 못했습니다. 글을 직접 붙여넣어 주세요.");
-          setMode("text");
-          setScreen("input");
-          scrollTop();
-          return;
-        }
         throw new Error(readErrorMessage(data) ?? "분석 중 문제가 발생했습니다.");
       }
       if (!isAnalysisResult(data)) throw new Error("분석 결과 형식이 올바르지 않습니다. 다시 시도해 주세요.");
@@ -191,7 +172,6 @@ export default function Analyzer() {
     setUrl(form.url);
     setResult(null);
     setError(form.error);
-    setUrlNote(form.urlNote);
     setLoadingStep(0);
     setScreen("input");
     scrollTop();
@@ -200,7 +180,6 @@ export default function Analyzer() {
   const handleHistoryOpen = (savedResult: AnalysisResult): void => {
     setResult(savedResult);
     setError(null);
-    setUrlNote(null);
     setScreen("result");
     scrollTop();
   };
@@ -209,7 +188,6 @@ export default function Analyzer() {
     setMode("text");
     setText(content);
     setUrl("");
-    setUrlNote(null);
     setError(null);
     setExamplesOpen(false);
     scrollTop();
@@ -267,7 +245,6 @@ export default function Analyzer() {
               setUrl={setUrl}
               onAnalyze={handleAnalyze}
               error={error}
-              urlNote={urlNote}
               onExamples={() => setExamplesOpen(true)}
             />
             <RecentHistory onOpen={handleHistoryOpen} />

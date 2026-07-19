@@ -252,9 +252,6 @@ async function runOne(testCase: AnalysisTestCase): Promise<EvaluationRecord> {
             totalTokens: observation.usage.totalTokens,
           }
         : {}),
-      ...(result.ai.grounding
-        ? { groundingUsed: true, citationCount: result.ai.grounding.sources.length }
-        : { groundingUsed: false }),
     },
     evaluation: {
       modeMatched,

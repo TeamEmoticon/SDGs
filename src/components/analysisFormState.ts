@@ -5,7 +5,6 @@ export interface AnalysisFormState {
   readonly text: string;
   readonly url: string;
   readonly error: string | null;
-  readonly urlNote: string | null;
 }
 
 export function createEmptyAnalysisFormState(): AnalysisFormState {
@@ -14,7 +13,6 @@ export function createEmptyAnalysisFormState(): AnalysisFormState {
     text: "",
     url: "",
     error: null,
-    urlNote: null,
   };
 }
 

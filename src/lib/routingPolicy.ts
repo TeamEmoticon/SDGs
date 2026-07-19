@@ -10,7 +10,6 @@ export const ROUTING_REASONS = {
   appInstallWithSensitiveRequest: "app_install_with_sensitive_request",
   coercionWithPaymentOrPersonalInfo: "coercion_with_payment_or_personal_info",
   secrecyWithMoney: "secrecy_with_money",
-  checkablePublicClaim: "checkable_public_claim",
   generalExplanationNeeded: "general_explanation_needed",
 } as const;
 

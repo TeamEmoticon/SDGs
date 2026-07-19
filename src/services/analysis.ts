@@ -106,7 +106,7 @@ async function runAiExecution(
   const input: ProviderInput = { kind: "text", maskedText };
   let outcome: Awaited<ReturnType<AnalysisProvider["summarize"]>>;
   try {
-    outcome = plannedMode === "GROUNDED_FACT_CHECK" ? await provider.factCheck(input) : await provider.summarize(input);
+    outcome = await provider.summarize(input);
   } catch {
     return fallback("upstream_error");
   }

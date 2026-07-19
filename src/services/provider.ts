@@ -1,7 +1,7 @@
 // provider.ts
 // 분석 오케스트레이션과 Gemini 구현의 경계.
 // 실제 provider가 없거나 키가 없으면 null을 반환한다(호출부에서 not_configured 처리).
-// 한 번의 분석에서 summarize 또는 factCheck 중 최대 한 개만, 최대 1회 호출된다.
+// 한 번의 분석에서 summarize는 최대 1회만 호출된다.
 
 import type { AiAnalysis, AiFailureStatus } from "../lib/types";
 import { requestGeminiAnalysis, type GeminiSource } from "./gemini.ts";
@@ -15,7 +15,6 @@ export type ProviderOutcome =
 
 export interface AnalysisProvider {
   summarize(input: ProviderInput): Promise<ProviderOutcome>;
-  factCheck(input: ProviderInput): Promise<ProviderOutcome>;
 }
 
 function toProviderOutcome(outcome: Awaited<ReturnType<typeof requestGeminiAnalysis>>): ProviderOutcome {
@@ -27,9 +26,6 @@ function toProviderOutcome(outcome: Awaited<ReturnType<typeof requestGeminiAnaly
 function createGeminiProvider(): AnalysisProvider {
   return {
     async summarize(input) {
-      return toProviderOutcome(await requestGeminiAnalysis(input, "summary"));
-    },
-    async factCheck(input) {
       return toProviderOutcome(await requestGeminiAnalysis(input, "summary"));
     },
   };

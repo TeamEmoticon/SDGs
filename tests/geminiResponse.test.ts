@@ -6,7 +6,6 @@ import {
   httpStatusToFailure,
   parseGeminiAnalysis,
   parseGeminiJson,
-  parseGroundingEvidence,
   requestGeminiAnalysis,
 } from "../src/services/gemini.ts";
 
@@ -60,22 +59,8 @@ test("보이스피싱 요약 요청은 키를 헤더로 보내고 검색 도구�
   assert.equal(body.generationConfig.responseJsonSchema.type, "object");
 });
 
-test("도구 응답의 코드 펜스 JSON과 검증된 출처를 읽는다", () => {
+test("코드 펜스로 감싼 JSON 응답을 읽는다", () => {
   const parsed = parseGeminiJson('```json\n{"summary":"요약","infoType":"공공 정보","actions":[],"riskPhrases":[],"difficultTerms":[],"missingInfo":[]}\n```');
-  const evidence = parseGroundingEvidence({
-    candidates: [
-      {
-        groundingMetadata: {
-          searchEntryPoint: { renderedContent: "<div>Google Search</div>" },
-          groundingChunks: [
-            { web: { title: "IANA", uri: "https://www.iana.org/help/example-domains" } },
-            { web: { title: "IANA", uri: "https://www.iana.org/help/example-domains" } },
-            { web: { title: "잘못된 출처", uri: "javascript:alert(1)" } },
-          ],
-        },
-      },
-    ],
-  });
 
   assert.deepEqual(parsed, {
     summary: "요약",
@@ -84,72 +69,6 @@ test("도구 응답의 코드 펜스 JSON과 검증된 출처를 읽는다", () 
     riskPhrases: [],
     difficultTerms: [],
     missingInfo: [],
-  });
-  assert.deepEqual(evidence?.sources, [{ title: "IANA", url: "https://www.iana.org/help/example-domains" }]);
-  assert.equal(evidence?.searchSuggestionHtml, "<div>Google Search</div>");
-});
-
-test("출처가 없는 grounded 응답은 검증에서 제외한다", () => {
-  assert.equal(parseGroundingEvidence({ candidates: [{ groundingMetadata: { groundingChunks: [] } }] }), null);
-});
-
-test("Grounding은 인용한 주장과 근거 수준을 함께 반환한다", () => {
-  const input = "정부가 다음 달부터 모든 국민에게 지원금을 지급한다고 확정 발표했습니다.";
-  const evidence = {
-    sources: [{ title: "공식 안내", url: "https://www.example.com/notice" }],
-    hasLinkedSupport: true,
-  };
-  const analysis = parseGeminiAnalysis(
-    {
-      summary: "지원금 지급 주장입니다.",
-      infoType: "정부·정책",
-      actions: ["공식 안내를 확인하세요."],
-      riskPhrases: [],
-      difficultTerms: [],
-      missingInfo: [],
-      factCheck: {
-        claimQuote: "정부가 다음 달부터 모든 국민에게 지원금을 지급한다고 확정 발표했습니다.",
-        verdict: "contradicted",
-        explanation: "공식 발표 자료에서 같은 내용을 확인하지 못했습니다.",
-      },
-    },
-    input,
-    evidence,
-  );
-
-  assert.deepEqual(Reflect.get(analysis ?? {}, "factCheck"), {
-    claimQuote: input,
-    verdict: "contradicted",
-    explanation: "공식 발표 자료에서 같은 내용을 확인하지 못했습니다.",
-    evidenceStrength: "linked",
-  });
-});
-
-test("연결 근거가 없는 Grounding은 근거 부족으로 낮춘다", () => {
-  const input = "이 건강식품을 드시면 암이 완치된다고 합니다.";
-  const analysis = parseGeminiAnalysis(
-    {
-      summary: "건강식품 완치 주장입니다.",
-      infoType: "건강 정보",
-      actions: ["의료진에게 확인하세요."],
-      riskPhrases: [],
-      difficultTerms: [],
-      missingInfo: [],
-      factCheck: {
-        claimQuote: "이 건강식품을 드시면 암이 완치된다고 합니다.",
-        verdict: "supported",
-        explanation: "검색 자료가 있습니다.",
-      },
-    },
-    input,
-    { sources: [{ title: "자료", url: "https://www.example.com/health" }] },
-  );
-
-  assert.deepEqual(Reflect.get(analysis ?? {}, "factCheck"), {
-    claimQuote: input,
-    verdict: "insufficient_evidence",
-    explanation: "검색 자료가 있습니다.",
-    evidenceStrength: "limited",
   });
 });
 
@@ -205,7 +124,8 @@ test("URL 입력은 Gemini에 전달하지 않는다", async () => {
   assert.deepEqual(outcome, { kind: "failure", status: "invalid_response" });
 });
 
-test("클라이언트 결과 검증기는 grounding 출처를 엄격히 검사한다", () => {
+test("기록 검증기는 옛 기록의 잔여 grounding 필드를 무시하고 통과시킨다", () => {
+  // fact-check 기능 제거 전에 저장된 기록에는 ai.grounding 등이 남아 있을 수 있다.
   const result = {
     inputType: "text",
     sourceUrl: null,
@@ -229,10 +149,6 @@ test("클라이언트 결과 검증기는 grounding 출처를 엄격히 검사�
   };
 
   assert.equal(isAnalysisResult(result), true);
-  assert.equal(
-    isAnalysisResult({ ...result, ai: { ...result.ai, grounding: { sources: [{ title: "IANA", url: "javascript:alert(1)" }] } } }),
-    false,
-  );
 });
 
 test("limits arrays and removes empty values", () => {

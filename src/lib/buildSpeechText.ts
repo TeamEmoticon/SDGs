@@ -4,7 +4,7 @@
 // SSML을 쓰지 않고, 문장 사이 마침표로 자연스러운 쉼을 유도한다.
 
 import type { AnalysisResult } from "./types";
-import { LEVEL_STORY, REQUESTED_ACTION_LABEL } from "./ui-config.ts";
+import { getImmediateActions, LEVEL_STORY } from "./ui-config.ts";
 
 const MAX_TOTAL_LENGTH = 2_000;
 const MAX_REASONS = 3;
@@ -84,29 +84,22 @@ export function buildSpeechText(result: AnalysisResult): string {
     reasons.forEach((reason, index) => parts.push(`${ORDINALS[index]}, ${reason}`));
   }
 
-  // 4) 지금 할 일 최대 3개 — AI가 제안한 행동이 있으면 그것을, 없으면 권장 안내 한 문장을 읽는다.
-  const requestedActions = (result.ai.requestedActions ?? [])
-    .filter((action) => action !== "none")
-    .map((action) => REQUESTED_ACTION_LABEL[action]);
-  const actions = (requestedActions.length > 0 ? requestedActions : result.ai.actions)
+  // 4) 지금 할 일 최대 3개 — 화면의 "지금 할 일"과 동일한 안내를 읽는다.
+  //    (result.ai.requestedActions는 "사기꾼이 요구한 행동"이므로 절대 할 일로 읽지 않는다)
+  const actions = getImmediateActions(result.ai.messageType, result.riskLevel)
     .map((action) => sanitize(action))
     .filter((action) => action.length > 0)
     .slice(0, MAX_ACTIONS);
-  const recommendation = sanitize(result.recommendation ?? "");
   if (actions.length > 0) {
     parts.push("지금 할 일입니다");
     actions.forEach((action, index) => parts.push(`${ORDINALS[index]}, ${action}`));
-  } else if (recommendation.length > 0) {
-    parts.push("지금 할 일입니다");
-    parts.push(recommendation);
   }
 
   // 5) 안전 보장 아님 주의 문구
   parts.push(SAFETY_NOTE);
 
-  // 위험 단계/요약/이유/행동/권장이 모두 비어 안내만 남는 경우가 사실상 없지만, 방어적으로 처리한다.
-  const meaningful =
-    levelStory.length > 0 || summary.length > 0 || reasons.length > 0 || actions.length > 0 || recommendation.length > 0;
+  // 위험 단계/요약/이유/할 일이 모두 비어 안내만 남는 경우가 사실상 없지만, 방어적으로 처리한다.
+  const meaningful = levelStory.length > 0 || summary.length > 0 || reasons.length > 0 || actions.length > 0;
   if (!meaningful) return FALLBACK_TEXT;
 
   const speech = joinSentences(parts);
